@@ -5,7 +5,7 @@
 
 ## Overview
 
-This guide will take you from **zero to production** in **30 minutes** with Continuum-Ops deployed, configured, and monitoring your Azure Service Bus integrations.
+This guide will take you from **zero to production** in **30 minutes** with Continuum-Ops deployed, configured, and monitoring your internal Azure Service Bus integrations.
 
 **Prerequisites:**
 - Azure subscription with Owner or Contributor role
@@ -67,27 +67,26 @@ az deployment group create \
 ```mermaid
 graph TB
     subgraph ResourceGroup[rg-continuumops-prod-eastus]
-        FUNC[Function App<br/>func-continuumops-prod-eastus]
-        PLAN[App Service Plan<br/>asp-continuumops-prod-eastus]
-        COSMOS[Cosmos DB<br/>cosmos-continuumops-prod-eastus]
-        OPENAI[Azure OpenAI<br/>aoai-continuumops-prod-eastus]
-        SEARCH[AI Search<br/>srch-continuumops-prod-eastus]
-        INSIGHTS[App Insights<br/>appi-continuumops-prod-eastus]
-        KV[Key Vault<br/>kv-contops-prod-eus]
-        STORAGE[Storage Account<br/>stcontopsprodeus]
-        MI[Managed Identity<br/>id-continuumops-prod]
+        FUNC["Function App<br/>func-continuumops-prod-eastus"]
+        PLAN["App Service Plan<br/>asp-continuumops-prod-eastus"]
+        COSMOS["Cosmos DB<br/>cosmos-continuumops-prod-eastus"]
+        AGENT["Azure AI Agent Service<br/>agent-continuumops-prod-eastus"]
+        OPENAI["Azure OpenAI<br/>aoai-continuumops-prod-eastus"]
+        SEARCH["AI Search<br/>srch-continuumops-prod-eastus"]
+        INSIGHTS["App Insights<br/>appi-continuumops-prod-eastus"]
+        KV["Key Vault<br/>kv-contops-prod-eus"]
+        STORAGE["Storage Account<br/>stcontopsprodeus"]
+        MI["Managed Identity<br/>id-continuumops-prod"]
     end
     
-    FUNC -.->|Uses| MI
-    FUNC -->|Runs on| PLAN
-    FUNC -->|State| STORAGE
+    FUNC -.->|Tool Host| AGENT
+    AGENT -->|Orchestrates| OPENAI
+    AGENT -->|Recall| SEARCH
+    AGENT -->|State| COSMOS
     FUNC -->|Logs| INSIGHTS
-    FUNC -->|Data| COSMOS
-    FUNC -->|AI| OPENAI
-    FUNC -->|Memory| SEARCH
-    FUNC -->|Secrets| KV
     
     style FUNC fill:#0078d4,stroke:#004578,stroke-width:3px,color:#fff
+    style AGENT fill:#50e6ff,stroke:#0078d4,stroke-width:3px
     style MI fill:#FFD700,stroke:#FF8C00,stroke-width:2px
 ```
 
@@ -121,7 +120,7 @@ echo "Managed Identity Object ID: $MANAGED_IDENTITY_ID"
 # Set variables
 SERVICE_BUS_NAMESPACE="contoso-sb"
 SERVICE_BUS_RESOURCE_GROUP="rg-integrations"
-SERVICE_BUS_SUBSCRIPTION_ID="<customer-subscription-id>"
+SERVICE_BUS_SUBSCRIPTION_ID="<target-subscription-id>"
 
 # Grant Service Bus Data Receiver (read DLQ messages)
 az role assignment create \
@@ -406,9 +405,9 @@ Start-Process "https://portal.azure.com/#blade/AppInsightsExtension/UsageNoteboo
 ```
 
 **Key Metrics to Verify:**
-- ✅ Watcher Agent polling every 2 minutes
+- ✅ Azure Monitor Alerts firing correctly (no custom watcher polling)
 - ✅ Discovery found expected number of integrations
-- ✅ Policies loaded successfully
+- ✅ Agent Service successfully invoking Tools
 - ✅ Azure OpenAI connectivity working
 - ✅ Cosmos DB read/write operations succeeding
 
@@ -584,47 +583,26 @@ az monitor app-insights query \
 
 ---
 
-## Cost Optimization
+## Resource Optimization
 
-### Development Environment (~$80/month)
-- Azure Functions: Consumption Plan ($0)
-- Cosmos DB: Serverless ($20)
-- Azure OpenAI: Pay-per-use ($20)
-- AI Search: Basic tier ($40)
-- Application Insights: Pay-as-you-go ($5)
+### Development Environment (Non-Prod)
+- Azure Functions: Consumption Plan
+- Cosmos DB: Serverless
+- Azure OpenAI: Pay-per-use
+- AI Search: Basic tier
+- Application Insights: Pay-as-you-go
 
-### Production Environment (~$500/month)
-- Azure Functions: Premium EP1 ($146)
-- Cosmos DB: Autoscale 1000-4000 RU/s ($75)
-- Azure OpenAI: Provisioned or Pay-per-use ($150)
-- AI Search: Standard tier ($100)
-- Application Insights: Pay-as-you-go ($30)
+### Production Environment
+- Azure Functions: Premium EP1
+- Cosmos DB: Autoscale
+- Azure OpenAI: Provisioned or Pay-per-use
+- AI Search: Standard tier
+- Application Insights: Pay-as-you-go
 
-**Cost Reduction Tips:**
+**Optimization Tips:**
 - Use Serverless Cosmos DB for low-volume environments
-- Set evidence TTL to 30 days (reduce storage)
 - Monitor Azure OpenAI token usage daily
 - Use Consumption Plan for dev/test (if Durable Functions limitations acceptable)
-
----
-
-## Support & Resources
-
-### Documentation
-- **[User Manual](03-User-Manual.md)** - Day-to-day operations
-- **[API Reference](04-API-Reference.md)** - REST API documentation
-- **[Best Practices](07-Best-Practices.md)** - Policy tuning & optimization
-- **[Troubleshooting](09-Troubleshooting.md)** - Common issues & solutions
-
-### Community
-- **Slack**: [community.continuum-ops.ai](https://community.continuum-ops.ai)
-- **GitHub Discussions**: [github.com/continuum-ops/discussions](https://github.com/continuum-ops/discussions)
-- **Stack Overflow**: Tag `continuum-ops`
-
-### Support
-- **Email**: support@continuum-ops.ai
-- **Docs**: [docs.continuum-ops.ai](https://docs.continuum-ops.ai)
-- **Status Page**: [status.continuum-ops.ai](https://status.continuum-ops.ai)
 
 ---
 
@@ -636,4 +614,4 @@ az monitor app-insights query \
 
 ---
 
-**© 2026 Continuum-Ops Inc. | Built with ❤️ on Azure**
+**© 2026 Continuum-Ops**

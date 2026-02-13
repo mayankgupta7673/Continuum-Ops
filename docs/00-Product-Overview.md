@@ -1,11 +1,11 @@
 # Continuum-Ops: Enterprise AutoHeal Platform
-## Powered by Microsoft AI Foundry & Azure AI Services
+## Powered by Microsoft AI Foundry & Azure AI Agent Service
 
 ---
 
 ## 🚀 Product Vision
 
-**Continuum-Ops** is a **zero-touch, AI-native operational resilience platform** that transforms integration reliability from reactive firefighting to autonomous self-healing. Built on Microsoft's cutting-edge AI Foundry and Azure AI Services, it delivers enterprise-grade automation with human oversight.
+**Continuum-Ops** is a **zero-touch, AI-native operational resilience platform** that transforms integration reliability from reactive firefighting to autonomous self-healing. Built on Microsoft's cutting-edge AI Foundry and Azure AI Services, it aims to deliver enterprise-grade automation with human oversight.
 
 ```mermaid
 mindmap
@@ -20,111 +20,64 @@ mindmap
       Self-configuration
       Adaptive learning
       Predictive healing
-    Enterprise-Ready
-      Multi-tenant SaaS
-      SOC 2 compliant
-      99.99% SLA
-      Global scale
-    Business Value
+    Internal Value
       95% MTTR reduction
-      80% ops cost savings
+      ops cost savings
       Zero integration changes
       Continuous learning
 ```
 
 ---
 
-## 🎯 Market Position
+## 🎯 Internal Value Proposition
 
-### Target Market
+**Why we are building this:**
 
-| Segment | Characteristics | Pain Points | Our Solution |
-|---------|----------------|-------------|--------------|
-| **Enterprise IT Ops** | 500+ employees, complex integrations | Manual incident response, high MTTR | Autonomous healing, 15-min MTTR |
-| **Digital Transformation** | Cloud migration, API economy | Integration brittleness, skill gaps | Zero-touch reliability, AI expertise |
-| **SaaS/ISVs** | Multi-tenant platforms | Customer-facing reliability issues | Self-service healing, customer transparency |
-| **Managed Services** | MSPs, system integrators | Labor-intensive operations | AI-powered automation, margin improvement |
-
-### Competitive Differentiation
-
-```mermaid
-quadrantChart
-    title Competitive Landscape
-    x-axis Low Automation --> High Automation
-    y-axis Low Intelligence --> High Intelligence
-    quadrant-1 Our Position
-    quadrant-2 Aspirational
-    quadrant-3 Laggards
-    quadrant-4 Tools Only
-    Traditional Monitoring: [0.3, 0.2]
-    APM Solutions: [0.4, 0.3]
-    AIOps Platforms: [0.6, 0.5]
-    Continuum-Ops: [0.9, 0.95]
-```
-
-**What Makes Us Different:**
-- ✅ **AI-First Architecture**: Built on Azure AI Foundry multi-agent system, not retrofitted AI
-- ✅ **Zero Integration Changes**: Customers don't modify code - we adapt to them
-- ✅ **Business Outcome Focus**: Verify business processes, not just technical metrics
-- ✅ **Autonomous Learning**: Improves continuously from every incident
-- ✅ **Transparent AI**: Explainable decisions with evidence citations
+*   **Reduce Operational Toil**: Automate the repetitive "Level 1" support tasks that consume engineering improvement time.
+*   **Improve Reliability**: Move from inconsistent manual fixes to standardized, audit-trailed AI remediation.
+*   **Modernize Ops Stack**: leverage the latest Microsoft AI Foundry capabilities for our internal operations.
 
 ---
 
 ## 🏗️ Technology Foundation
 
-### Microsoft AI Foundry Integration
+### Microsoft Azure Native Integration
 
 ```mermaid
 flowchart TB
-    subgraph AIFoundry[Azure AI Foundry]
-        AGENTS[Multi-Agent System<br/>Specialized AI agents]
-        ORCHESTRATOR[Agent Orchestrator<br/>Coordination layer]
-        MEMORY[Persistent Memory<br/>Agent state management]
-        TOOLS[Tool Registry<br/>Extensible capabilities]
-    end
-    
-    subgraph AzureAI[Azure AI Services]
-        OPENAI[Azure OpenAI<br/>GPT-4 Turbo, o1]
-        SEMANTICKERNEL[Semantic Kernel<br/>AI orchestration]
-        PROMPTFLOW[Prompt Flow<br/>LLM workflow management]
-        AISEARCH[AI Search<br/>Semantic pattern matching]
+    subgraph AzurePlatform[Azure Platform]
+        AZMON[Azure Monitor<br/>Dynamic Detection]
+        AGENT_SVC[Azure AI Agent Service<br/>Managed Orchestration]
+        FUNCTIONS[Azure Functions<br/>Tooling Layer]
     end
     
     subgraph OurPlatform[Continuum-Ops Platform]
-        DETECTIVE[Detective Agent]
-        DIAGNOSTIC[Diagnostic Agent]
-        REPAIR[Repair Agent]
-        LEARNING[Learning Agent]
+        COORD[Coordinator]
+        DIAGNOSTIC[Diagnostician]
+        REPAIR[Executor]
     end
     
-    AGENTS --> DETECTIVE
-    AGENTS --> DIAGNOSTIC
-    AGENTS --> REPAIR
-    AGENTS --> LEARNING
+    AZMON -->|Triggers| AGENT_SVC
+    AGENT_SVC -->|Hosts| COORD
+    COORD -->|Delegates to| DIAGNOSTIC
+    COORD -->|Delegates to| REPAIR
+    REPAIR -->|Invokes| FUNCTIONS
     
-    OPENAI --> AGENTS
-    SEMANTICKERNEL --> ORCHESTRATOR
-    PROMPTFLOW --> DIAGNOSTIC
-    AISEARCH --> LEARNING
-    
-    style AIFoundry fill:#0078d4,stroke:#004578,stroke-width:3px,color:#fff
-    style AzureAI fill:#50e6ff,stroke:#0078d4,stroke-width:2px
+    style AzurePlatform fill:#0078d4,stroke:#004578,stroke-width:3px,color:#fff
+    style OurPlatform fill:#50e6ff,stroke:#0078d4,stroke-width:2px
 ```
 
 ### Technology Stack (Best-in-Class)
 
 | Layer | Technology | Why Best-in-Class |
 |-------|-----------|-------------------|
-| **AI Orchestration** | **Azure AI Foundry Agents** | Microsoft's latest multi-agent framework with native Azure integration |
-| **LLM** | **GPT-4 Turbo / GPT-4o** | Highest reasoning capability, function calling, vision support |
-| **AI Workflow** | **Prompt Flow** | Visual LLM app development, built-in evaluation, enterprise-ready |
-| **Semantic Memory** | **Semantic Kernel + AI Search** | Persistent agent memory, semantic pattern matching |
-| **Orchestration** | **Azure Durable Functions + Dapr** | Stateful workflows with distributed system patterns |
-| **Observability** | **Azure Monitor + Application Insights** | Native integration, AI-powered anomaly detection |
-| **Data** | **Cosmos DB + Azure SQL** | Multi-model, globally distributed, vector search support |
-| **Identity** | **Microsoft Entra ID + Managed Identity** | Zero-trust, passwordless, enterprise SSO |
-| **Collaboration** | **Microsoft Teams + Copilot** | Native approval workflows, AI-assisted decision support |
+| **AI Orchestration** | **Azure AI Agent Service** | Fully managed service for building and deploying AI agents |
+| **Detection** | **Azure Monitor** | Native dynamic thresholds (ML) for anomaly detection |
+| **LLM** | **GPT-4o** | Multimodal reasoning with higher speed and lower cost |
+| **Tooling** | **OpenAPI + Azure Functions** | Standardized, interchangeable tool definitions |
+| **Memory** | **Azure AI Search** | Vector-based semantic recall for historical patterns |
+| **Runtime** | **Azure Functions (.NET 8)** | Serverless, scalable execution environment |
+| **Identity** | **Microsoft Entra ID** | Zero-trust authentication backbone |
 
 ---
 
@@ -141,26 +94,26 @@ graph TB
     end
     
     subgraph AIFoundryAgents[Azure AI Foundry - Agent System]
-        SUPERVISOR[Supervisor Agent<br/>Orchestrates sub-agents]
+        SUPERVISOR["Supervisor Agent<br/>Orchestrates sub-agents"]
         
         subgraph SpecializedAgents[Specialized Agents]
-            WATCHER[Watcher Agent<br/>Monitors health signals]
-            ANALYZER[Analyzer Agent<br/>Correlates evidence]
-            DIAGNOSTICIAN[Diagnostician Agent<br/>GPT-4 powered RCA]
-            PLANNER[Planner Agent<br/>Creates repair plans]
-            EXECUTOR[Executor Agent<br/>Safe remediation]
-            VERIFIER[Verifier Agent<br/>Outcome validation]
-            LEARNER[Learner Agent<br/>Pattern extraction]
+            WATCHER["Watcher Agent<br/>Monitors health signals"]
+            ANALYZER["Analyzer Agent<br/>Correlates evidence"]
+            DIAGNOSTICIAN["Diagnostician Agent<br/>GPT-4 powered RCA"]
+            PLANNER["Planner Agent<br/>Creates repair plans"]
+            EXECUTOR["Executor Agent<br/>Safe remediation"]
+            VERIFIER["Verifier Agent<br/>Outcome validation"]
+            LEARNER["Learner Agent<br/>Pattern extraction"]
         end
         
-        MEMORY[Agent Memory Store<br/>Semantic Kernel + AI Search]
-        TOOLS[Tool Registry<br/>Service Bus, ERP, etc.]
+        MEMORY["Agent Memory Store<br/>Semantic Kernel + AI Search"]
+        TOOLS["Tool Registry<br/>Service Bus, ERP, etc."]
     end
     
     subgraph Governance[Governance & Safety]
-        POLICY[Policy Engine<br/>Guardrails]
-        APPROVAL[Human-in-Loop<br/>Teams Copilot]
-        AUDIT[Audit Trail<br/>Immutable logs]
+        POLICY["Policy Engine<br/>Guardrails"]
+        APPROVAL["Human-in-Loop<br/>Teams Copilot"]
+        AUDIT["Audit Trail<br/>Immutable logs"]
     end
     
     SERVICEBUS -->|Failure signals| WATCHER
@@ -191,34 +144,24 @@ graph TB
     style Governance fill:#FFD700,stroke:#FF8C00,stroke-width:2px
 ```
 
-### Agent Capabilities (Powered by GPT-4 Turbo)
+### Agent Capabilities (Powered by Azure AI Agent Service)
 
-#### 1. Watcher Agent
-**Purpose**: Continuous health monitoring with anomaly detection
+#### 1. Detection (Azure Monitor)
+**Purpose**: Zero-latency monitoring with ML-based baselining.
+*   **Native Capability**: Replaces custom "Watcher" code. Automatically learns weekly/daily seasonality.
+*   **Trigger**: Fires webhook only when genuine behavioral anomalies occur.
 
-**AI Capabilities**:
-- ✨ **Semantic pattern recognition** (AI Search)
-- ✨ **Anomaly prediction** (Azure Monitor AI)
-- ✨ **Correlation intelligence** (GPT-4 Turbo)
-- ✨ **Adaptive thresholds** (learns normal behavior)
-
-#### 2. Analyzer Agent
-**Purpose**: Evidence collection and correlation
-
-**AI Capabilities**:
-- ✨ **Intelligent log parsing** (GPT-4 Turbo)
-- ✨ **Cross-system correlation** (Semantic Kernel)
-- ✨ **PII auto-detection and redaction** (Azure AI Content Safety)
-- ✨ **Temporal reasoning** (understands event sequences)
+#### 2. Coordinator Agent
+**Purpose**: Central nervous system.
+*   **Function**: Receives alerts, instantiates the incident context, and assigns work to specific agents.
+*   **Human Handoff**: Seamlessly brings humans into the loop via Teams when confidence is low.
 
 #### 3. Diagnostician Agent
-**Purpose**: Root cause analysis with explainability
-
-**AI Capabilities**:
-- ✨ **Multi-modal analysis** (GPT-4 Turbo with Vision - can analyze screenshots)
-- ✨ **Chain-of-thought reasoning** (GPT-4o with reasoning tokens)
-- ✨ **Evidence citation** (cites specific logs/metrics)
-- ✨ **Confidence scoring** (calibrated via historical data)
+**Purpose**: Deep reasoning and Root Cause Analysis.
+*   **Capabilities**:
+    *   **Log Analysis**: Queries App Insights to correlate errors.
+    *   **Pattern Matching**: "I've seen this error 5 times before, it's usually a data issue."
+    *   **Evidence Citation**: Points to specific log lines driving the conclusion.
 
 **Prompt Flow Integration**:
 ```yaml
@@ -298,31 +241,21 @@ outputs:
 
 ```mermaid
 sequenceDiagram
-    participant CUSTOMER as Customer
-    participant DEPLOY as Deployment Wizard
-    participant DISCOVERY as Auto-Discovery Agent
-    participant CONFIG as Self-Config Engine
-    participant LEARN as Learning Agent
+    participant APP_TEAM as App Team
+    participant AZURE as Azure Portal
+    participant OPS as Continuum-Ops
     
-    CUSTOMER->>DEPLOY: Deploy via ARM template
-    DEPLOY->>DISCOVERY: Grant read permissions
-    DISCOVERY->>DISCOVERY: Scan Azure subscriptions
-    DISCOVERY->>CONFIG: Discovered 47 integrations
-    CONFIG->>CONFIG: Analyze patterns
-    CONFIG->>LEARN: Fetch similar customer configs
-    LEARN->>CONFIG: Recommend policies
-    CONFIG->>CUSTOMER: Review & approve policies
-    CUSTOMER->>CONFIG: Approve
-    
-    Note over DEPLOY,CONFIG: Total time: 30 minutes<br/>No code changes required
+    APP_TEAM->>AZURE: One-Click Deploy (ARM/Bicep)
+    AZURE->>OPS: Deployment Complete
+    OPS->>OPS: Auto-Discover Resources (Service Bus)
+    OPS->>AZURE: Configure Monitor Alerts
+    OPS->>APP_TEAM: Ready! (Total: 15 mins)
 ```
 
-**Customer Experience**:
-1. ☑️ Deploy ARM template (5 min)
-2. ☑️ Grant Azure permissions (10 min)
-3. ☑️ Review auto-discovered integrations (10 min)
-4. ☑️ Approve AI-recommended policies (5 min)
-5. ✅ **Live in production** (30 min total)
+**Experience**:
+1. ☑️ Deploy from Bicep.
+2. ☑️ Grant Permissions.
+3. ✅ **Live**. The system auto-configures Azure Monitor alerts for you.
 
 ### 2. Self-Improving AI
 
@@ -351,98 +284,13 @@ flowchart LR
 - 📈 **Week 12**: 80%+ auto-resolution rate (mature system)
 - 📈 **Week 24**: 90%+ with proactive prevention
 
-### 3. Multi-Tenant SaaS Architecture
-
-```mermaid
-C4Container
-    title Continuum-Ops SaaS Platform
-
-    Person(customer1, "Customer A", "Healthcare provider")
-    Person(customer2, "Customer B", "Retail company")
-    
-    System_Boundary(platform, "Continuum-Ops Platform") {
-        Container(api, "Management API", "Azure API Management", "Tenant routing, rate limiting")
-        Container(agents, "AI Agent Pool", "Azure AI Foundry", "Shared intelligent agents")
-        Container(isolation, "Tenant Isolation", "Cosmos DB partitions", "Data segregation")
-        Container(billing, "Usage Metering", "Azure Managed App", "Consumption tracking")
-    }
-    
-    System_Ext(customer1_azure, "Customer A Azure", "Service Bus, ERP")
-    System_Ext(customer2_azure, "Customer B Azure", "Service Bus, ERP")
-    
-    Rel(customer1, api, "Uses", "HTTPS + OAuth")
-    Rel(customer2, api, "Uses", "HTTPS + OAuth")
-    
-    Rel(api, agents, "Routes requests")
-    Rel(agents, isolation, "Reads/writes", "Partition key = tenantId")
-    
-    Rel(agents, customer1_azure, "Monitors/Heals", "Managed Identity")
-    Rel(agents, customer2_azure, "Monitors/Heals", "Managed Identity")
-    
-    Rel(agents, billing, "Reports usage")
-```
-
-**Tenant Isolation**:
-- 🔒 **Data**: Cosmos DB partition per tenant
-- 🔒 **Compute**: Isolated Durable Function orchestrations
-- 🔒 **Identity**: Customer-specific Managed Identity
-- 🔒 **Network**: Azure Private Link per customer
-
----
-
-## 💼 Business Model
-
-### Pricing (Transparent & Predictable)
-
-```mermaid
-flowchart LR
-    subgraph Tiers[Pricing Tiers]
-        STARTER[Starter<br/>$2,500/month<br/>Up to 10 integrations<br/>1M messages/month]
-        PRO[Professional<br/>$7,500/month<br/>Up to 50 integrations<br/>10M messages/month]
-        ENTERPRISE[Enterprise<br/>Custom pricing<br/>Unlimited integrations<br/>Unlimited messages]
-    end
-    
-    subgraph Included[All Tiers Include]
-        AUTO[Auto-discovery]
-        AI[AI-powered diagnosis]
-        HEAL[Auto-remediation]
-        TEAMS[Teams integration]
-        SUPPORT[24/7 support]
-    end
-    
-    STARTER -.-> Included
-    PRO -.-> Included
-    ENTERPRISE -.-> Included
-    
-    style ENTERPRISE fill:#FFD700,stroke:#FF8C00,stroke-width:3px
-```
-
-**Add-Ons**:
-- 🔌 **Premium Connectors** (SAP, Salesforce, custom ERP): $500/connector/month
-- 🎓 **Professional Services** (custom runbooks, training): $250/hour
-- 🔐 **Advanced Security** (private deployment, SOC 2 audit): $2,000/month
-- 🌍 **Multi-region DR**: $1,500/month per additional region
-
-### ROI Calculator
-
-**Typical Enterprise (100 integrations)**:
-- **Current Cost**: 2 FTE ops engineers × $120K = $240K/year
-- **Continuum-Ops Cost**: $90K/year (Professional tier)
-- **Estimated Savings**: $150K/year (62% reduction)
-- **Payback Period**: 3.6 months
-
-**Plus Intangible Benefits**:
-- ✅ Reduced MTTR from hours to minutes → higher availability
-- ✅ No business-critical failures during off-hours → better customer experience
-- ✅ Freed-up engineering time for innovation → competitive advantage
-
 ---
 
 ## 📊 Success Metrics & SLAs
 
-### Platform SLAs (Production)
+### Platform SLAs (Target)
 
-| Metric | SLA | Measurement |
+| Metric | Target | Measurement |
 |--------|-----|-------------|
 | **Platform Uptime** | 99.99% | <4.38 min downtime/month |
 | **Detection Latency** | <5 min | 95th percentile |
@@ -451,11 +299,11 @@ flowchart LR
 | **False Positive Rate** | <5% | Verified incidents / total triggers |
 | **Diagnosis Accuracy** | >90% | Validated against manual RCA |
 
-### Customer Success Metrics (Guaranteed Improvements)
+### Internal Success Metrics
 
 ```mermaid
 gantt
-    title Customer Success Journey (First 6 Months)
+    title Success Journey (First 6 Months)
     dateFormat YYYY-MM-DD
     section MTTR Reduction
     Current MTTR (2-8 hrs)    :done, baseline, 2026-01-01, 30d
@@ -471,194 +319,41 @@ gantt
 
 ---
 
-## 🚦 Go-to-Market Strategy
+### Implementation Plan
 
-### Phase 1: Private Beta (Q1 2026)
-- 🎯 **Target**: 5 design partners (enterprise customers)
-- 🎯 **Goal**: Validate product-market fit, gather feedback
-- 🎯 **Pricing**: Free during beta
-- 🎯 **Success Criteria**: 3+ customers achieve 50%+ auto-resolution rate
+### Phase 1: Prototype & Validation (Current)
+- 🎯 **Target**: Internal demo for leadership
+- 🎯 **Goal**: Secure approval for MVP development
+- 🎯 **Success Criteria**: Leadership sign-off
 
-### Phase 2: Limited Availability (Q2 2026)
-- 🎯 **Target**: 25 customers (expansion from beta)
-- 🎯 **Goal**: Prove scalability, refine pricing
-- 🎯 **Pricing**: 50% discount (early adopter pricing)
-- 🎯 **Success Criteria**: $500K ARR, 90% customer retention
-
-### Phase 3: General Availability (Q3 2026)
-- 🎯 **Target**: 100+ customers by EOY
-- 🎯 **Goal**: Establish market leadership
-- 🎯 **Pricing**: Full pricing with volume discounts
-- 🎯 **Success Criteria**: $2M ARR, <10% churn rate
-
-### Phase 4: Enterprise Scale (Q4 2026+)
-- 🎯 **Target**: Fortune 500, global enterprises
-- 🎯 **Goal**: Become category leader in AI-powered ops
-- 🎯 **Pricing**: Custom enterprise agreements
-- 🎯 **Success Criteria**: $10M ARR, analyst recognition (Gartner, Forrester)
+### Phase 2: MVP Development (Q2 2026)
+- 🎯 **Target**: Core platform capabilities
+- 🎯 **Goal**: Build "Auto-Heal" loop for Service Bus
+- 🎯 **Success Criteria**: End-to-end working demo
 
 ---
 
-## 🛡️ Security & Compliance
-
-### Security Posture
-
-```mermaid
-mindmap
-  root((Security))
-    Data Protection
-      Encryption at rest AES-256
-      Encryption in transit TLS 1.3
-      Key management Azure Key Vault
-      PII auto-redaction
-    Identity & Access
-      Zero-trust architecture
-      Managed Identity
-      MFA enforced
-      RBAC least privilege
-    Compliance
-      SOC 2 Type II
-      ISO 27001
-      GDPR compliant
-      HIPAA ready
-    Monitoring
-      24/7 SOC
-      Threat detection
-      Anomaly alerts
-      Incident response
-```
-
-### Compliance Certifications (Roadmap)
-
-| Certification | Status | Target Date |
-|---------------|--------|-------------|
-| **SOC 2 Type II** | 🟡 In Progress | Q2 2026 |
-| **ISO 27001** | 🟡 In Progress | Q3 2026 |
-| **GDPR** | ✅ Compliant | Current |
-| **HIPAA** | 🟡 In Progress | Q4 2026 |
-| **FedRAMP** | 🔴 Planned | Q2 2027 |
-
----
-
-## 🎓 Customer Success Program
-
-### Onboarding (White-Glove Service)
-
-```mermaid
-journey
-    title Customer Onboarding Journey (30 Days)
-    section Week 1 Setup
-      Kickoff call: 5: Customer, CSM
-      Deploy platform: 4: Customer, Solutions Architect
-      Configure RBAC: 3: Customer, Solutions Architect
-      Discover integrations: 5: System
-    section Week 2 Configuration
-      Policy workshop: 4: Customer, CSM
-      Runbook customization: 3: Customer, Solutions Architect
-      Teams integration: 5: Customer
-      Test synthetic failures: 4: Customer, QA Engineer
-    section Week 3 Go-Live
-      Enable monitoring: 5: Customer, CSM
-      First real incident: 4: Customer, System
-      Review & tune: 4: Customer, CSM
-    section Week 4 Optimization
-      Performance review: 5: Customer, CSM
-      Best practices training: 4: Customer, CSM
-      Expansion planning: 3: Customer, Account Manager
-```
-
-### Support Tiers
-
-| Tier | Response Time | Channels | Included In |
-|------|--------------|----------|-------------|
-| **Standard** | 4 business hours | Email, Portal | Starter |
-| **Priority** | 1 business hour | Email, Portal, Slack | Professional |
-| **Premium** | 15 minutes 24/7 | Email, Portal, Slack, Phone | Enterprise |
-
----
-
-## 📚 Documentation Structure (Final)
+## 📚 Documentation Structure
 
 ```
 docs/
 ├── 00-Product-Overview.md              ⭐ This document
-├── 01-Technical-Architecture.md        🏗️ System design, AI agents
-├── 02-Deployment-Guide.md              🚀 Customer deployment (30 min)
+├── 01-Technical-Architecture.md        🏗️ System design (Azure AI Agent Service)
+├── 02-Deployment-Guide.md              🚀 Deployment (15 min)
 ├── 03-User-Manual.md                   📖 Operations guide
 ├── 04-API-Reference.md                 🔌 REST API, webhooks
 ├── 05-Security-Compliance.md           🛡️ Security & compliance
-├── 06-Integration-Catalog.md           🔧 Supported systems & connectors
-├── 07-Best-Practices.md                ✨ Policy tuning, optimization
-├── 08-Troubleshooting.md               🔍 Common issues & solutions
-└── 09-Release-Notes.md                 📝 Version history
+├── 07-Implementation-Roadmap.md        📝 Development plan
 ```
 
 ---
 
-## 🤝 Strategic Partnerships
+## 📞 Contact
 
-### Microsoft Partner Ecosystem
-
-```mermaid
-flowchart TB
-    CONTINUUM[Continuum-Ops]
-    
-    subgraph Microsoft[Microsoft Partnerships]
-        AZURE[Azure Marketplace<br/>Co-sell ready]
-        DYNAMICS[Dynamics 365<br/>Native integration]
-        MPARTY[Microsoft for Startups<br/>Azure credits]
-        ISV[ISV Success Program<br/>GTM support]
-    end
-    
-    subgraph SIs[System Integrators]
-        ACCENTURE[Accenture]
-        DELOITTE[Deloitte]
-        COGNIZANT[Cognizant]
-    end
-    
-    subgraph Tech[Technology Partners]
-        SERVICENOW[ServiceNow<br/>ITSM integration]
-        PAGERDUTY[PagerDuty<br/>Incident management]
-        DATADOG[Datadog<br/>Observability]
-    end
-    
-    CONTINUUM --> Microsoft
-    CONTINUUM --> SIs
-    CONTINUUM --> Tech
-    
-    style Microsoft fill:#0078d4,stroke:#004578,stroke-width:3px,color:#fff
-```
+- **Mayank Gupta** - [mayank.h.gupta@capgemini.com](mailto:mayank.h.gupta@capgemini.com)
 
 ---
 
-## 📞 Contact & Next Steps
-
-### For Potential Customers
-- 🌐 **Website**: www.continuum-ops.ai
-- 📧 **Sales**: sales@continuum-ops.ai
-- 📅 **Book Demo**: [calendly.com/continuum-ops-demo](https://calendly.com/continuum-ops-demo)
-- 💬 **Slack Community**: [community.continuum-ops.ai](https://community.continuum-ops.ai)
-
-### For Investors
-- 📧 **Investor Relations**: investors@continuum-ops.ai
-- 📊 **Pitch Deck**: Available on request
-- 💰 **Funding Stage**: Seed round opening Q2 2026
-
-### For Partners
-- 🤝 **Partner Program**: partners@continuum-ops.ai
-- 📜 **Partner Portal**: [partners.continuum-ops.ai](https://partners.continuum-ops.ai)
-
----
-
-## 📝 Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 2.0 | 2026-02-12 | Enterprise product launch version with AI Foundry integration |
-| 1.0 | 2026-01-15 | Initial concept document |
-
----
-
-**© 2026 Continuum-Ops Inc. All rights reserved.**
+**© 2026 Continuum-Ops**
 
 *Built with ❤️ on Microsoft Azure*

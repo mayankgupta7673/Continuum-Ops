@@ -809,9 +809,8 @@ client.policies.update(
 
 | Tier | Requests/Minute | Burst Limit |
 |------|-----------------|-------------|
-| **Starter** | 60 | 100 |
-| **Professional** | 300 | 500 |
-| **Enterprise** | 1000 | 2000 |
+| **Standard** | 300 | 500 |
+| **High Scale** | 1000 | 2000 |
 
 **Rate Limit Headers:**
 ```
@@ -861,4 +860,4 @@ X-RateLimit-Reset: 1707825600
 
 ---
 
-**© 2026 Continuum-Ops Inc.**
+**© 2026 Continuum-Ops**

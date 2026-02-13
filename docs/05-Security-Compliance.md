@@ -26,31 +26,31 @@ flowchart TB
     end
     
     subgraph IdentityLayer[Identity & Access Control]
-        ENTRA[Microsoft Entra ID<br/>Authentication]
-        MI[Managed Identity<br/>Service-to-Service]
-        RBAC[Azure RBAC<br/>Authorization]
-        PIM[Privileged Identity Mgmt<br/>Just-in-time access]
+        ENTRA["Microsoft Entra ID<br/>Authentication"]
+        MI["Managed Identity<br/>Service-to-Service"]
+        RBAC["Azure RBAC<br/>Authorization"]
+        PIM["Privileged Identity Mgmt<br/>Just-in-time access"]
     end
     
     subgraph NetworkLayer[Network Security]
-        APIM[API Management<br/>Rate limiting, IP filtering]
-        FIREWALL[Azure Firewall<br/>Outbound filtering]
-        PE[Private Endpoints<br/>Optional for data plane]
-        NSG[Network Security Groups<br/>Subnet isolation]
+        APIM["API Management<br/>Rate limiting, IP filtering"]
+        FIREWALL["Azure Firewall<br/>Outbound filtering"]
+        PE["Private Endpoints<br/>Optional for data plane"]
+        NSG["Network Security Groups<br/>Subnet isolation"]
     end
     
     subgraph DataLayer[Data Protection]
-        ENCRYPTION_TRANSIT[TLS 1.3<br/>All connections]
-        ENCRYPTION_REST[AES-256<br/>Data at rest]
-        KV[Key Vault<br/>Secrets management]
-        CMK[Customer Managed Keys<br/>Optional BYOK]
+        ENCRYPTION_TRANSIT["TLS 1.3<br/>All connections"]
+        ENCRYPTION_REST["AES-256<br/>Data at rest"]
+        KV["Key Vault<br/>Secrets management"]
+        CMK["Customer Managed Keys<br/>Optional BYOK"]
     end
     
     subgraph MonitoringLayer[Security Monitoring]
-        DEFENDER[Microsoft Defender<br/>Threat detection]
-        SENTINEL[Microsoft Sentinel<br/>SIEM]
-        AUDIT[Immutable Audit Log<br/>Cosmos DB]
-        ALERTS[Security Alerts<br/>PagerDuty/Teams]
+        DEFENDER["Microsoft Defender<br/>Threat detection"]
+        SENTINEL["Microsoft Sentinel<br/>SIEM"]
+        AUDIT["Immutable Audit Log<br/>Cosmos DB"]
+        ALERTS["Security Alerts<br/>PagerDuty/Teams"]
     end
     
     CUSTOMER -->|MFA + OAuth 2.0| ENTRA
@@ -302,15 +302,15 @@ curl -X POST "https://func-continuumops.../api/gdpr/export" \
 ```mermaid
 graph TB
     subgraph CustomerVNet[Customer Virtual Network]
-        SUBNET_FUNCTIONS[Functions Subnet<br/>10.0.1.0/24]
-        SUBNET_DATA[Data Subnet<br/>10.0.2.0/24]
+        SUBNET_FUNCTIONS["Functions Subnet<br/>10.0.1.0/24"]
+        SUBNET_DATA["Data Subnet<br/>10.0.2.0/24"]
     end
     
     subgraph PrivateEndpoints[Private Endpoints]
-        PE_COSMOS[Cosmos DB PE<br/>10.0.2.10]
-        PE_SEARCH[AI Search PE<br/>10.0.2.11]
-        PE_STORAGE[Storage PE<br/>10.0.2.12]
-        PE_KV[Key Vault PE<br/>10.0.2.13]
+        PE_COSMOS["Cosmos DB PE<br/>10.0.2.10"]
+        PE_SEARCH["AI Search PE<br/>10.0.2.11"]
+        PE_STORAGE["Storage PE<br/>10.0.2.12"]
+        PE_KV["Key Vault PE<br/>10.0.2.13"]
     end
     
     subgraph PublicServices[Azure Services]
@@ -434,107 +434,45 @@ Actions:
 
 ---
 
-## Compliance Certifications
+## Compliance Standards (Planned)
 
-### SOC 2 Type II
+### Data Privacy
 
-**Status:** 🟡 In Progress (Q2 2026)
-
-**Trust Services Criteria:**
-- ✅ **Security** - Logical & physical access controls
-- ✅ **Availability** - 99.99% uptime SLA
-- ✅ **Processing Integrity** - Accurate incident resolution
-- ✅ **Confidentiality** - PII redaction, encryption
-- ✅ **Privacy** - GDPR compliance
-
-**Controls Implemented:**
-
-| Control ID | Description | Evidence |
-|------------|-------------|----------|
-| **CC6.1** | Logical access controls | RBAC, MFA, audit logs |
-| **CC6.2** | Authentication mechanisms | Managed Identity, OAuth 2.0 |
-| **CC6.6** | Encryption of data | TLS 1.3, AES-256 |
-| **CC7.2** | System monitoring | Application Insights, Sentinel |
-| **CC8.1** | Change management | Git commits, approval workflows |
-
-### GDPR Compliance
-
-**Status:** ✅ Compliant
-
-**GDPR Rights Supported:**
+**GDPR Alignment:**
 
 ```yaml
-Right to Access (Article 15):
-  Endpoint: GET /api/gdpr/export
-  Response Time: 30 days
-  Format: JSON, CSV, PDF
+Right to Access:
+  Mechanism: Audit log export
+  Response Time: Target < 30 days
+  Format: JSON
 
-Right to Erasure (Article 17):
-  Endpoint: DELETE /api/gdpr/delete
-  Response Time: 7 days
-  Scope: All PII, logs, incidents
-
-Right to Rectification (Article 16):
-  Endpoint: PUT /api/gdpr/rectify
-  Response Time: 7 days
-  
-Right to Data Portability (Article 20):
-  Endpoint: POST /api/gdpr/port
-  Format: JSON (machine-readable)
-
-Right to Object (Article 21):
-  Endpoint: POST /api/gdpr/opt-out
-  Effect: Disable AI processing for customer
+Right to Erasure:
+  Mechanism: API Trigger
+  Response Time: Target < 7 days
 ```
 
-**Data Processing Agreement (DPA):**
-- Available at: https://continuum-ops.ai/legal/dpa
-- Sub-processors: Microsoft Azure (ISO 27001, SOC 2)
-- Data location: Customer-specified Azure region
-- Cross-border transfers: EU Standard Contractual Clauses (SCCs)
+**Data Processing Agreement:**
+- Internal governance applies.
+- Data location: Azure region specified at deployment.
 
-### HIPAA Compliance
+### Security Standards
 
-**Status:** 🟡 In Progress (Q4 2026)
+**HIPAA & SOC 2 Alignments:**
 
-**HIPAA Safeguards:**
+We aim to follow industry best practices:
 
 ```yaml
 Administrative Safeguards:
-  - Security Management Process (§164.308(a)(1))
-  - Workforce Security (§164.308(a)(3))
-  - Contingency Plan (§164.308(a)(7))
-
-Physical Safeguards:
-  - Facility Access Controls (§164.310(a)(1))
-  - Workstation Use (§164.310(b))
-  - Device Controls (§164.310(d)(1))
+  - Security Management Process
+  - Workforce Security
+  - Contingency Plan
 
 Technical Safeguards:
-  - Access Control (§164.312(a)(1)) - RBAC, MFA
-  - Audit Controls (§164.312(b)) - Immutable logs
-  - Integrity (§164.312(c)(1)) - Encryption, checksums
-  - Transmission Security (§164.312(e)(1)) - TLS 1.3
+  - Access Control (RBAC, MFA)
+  - Audit Controls (Immutable logs)
+  - Integrity (Encryption)
+  - Transmission Security (TLS 1.3)
 ```
-
-**Business Associate Agreement (BAA):**
-- Required for HIPAA-regulated customers
-- Request via: compliance@continuum-ops.ai
-- Microsoft Azure BAA: [Azure BAA](https://www.microsoft.com/en-us/licensing/product-licensing/products)
-
-### ISO 27001
-
-**Status:** 🟡 In Progress (Q3 2026)
-
-**Information Security Controls:**
-
-| Annex A | Control | Implementation |
-|---------|---------|----------------|
-| **A.9** | Access Control | RBAC, MFA, JIT access |
-| **A.10** | Cryptography | AES-256, TLS 1.3, CMK |
-| **A.12** | Operations Security | Change mgmt, monitoring |
-| **A.14** | System Acquisition | Secure SDLC, code review |
-| **A.16** | Incident Management | Auto-detection, response |
 
 ---
 
@@ -653,7 +591,7 @@ curl -X POST "https://func-continuumops.../api/compliance/reports" \
 
 | Severity | Definition | Response Time | Escalation |
 |----------|-----------|---------------|------------|
-| **P0 - Critical** | Data breach, ransomware | 15 minutes | CEO, CISO |
+| **P0 - Critical** | Data breach, ransomware | 15 minutes | CIO, CISO |
 | **P1 - High** | Unauthorized access, DDoS | 1 hour | Security team |
 | **P2 - Medium** | Failed attack attempt | 4 hours | SOC analyst |
 | **P3 - Low** | Policy violation | 24 hours | Security team |
@@ -684,19 +622,19 @@ flowchart TB
 
 ---
 
-## Customer Responsibilities (Shared Responsibility Model)
+## Shared Responsibility Model
 
-### Continuum-Ops Responsibilities
+### Continuum-Ops Platform Team Responsibilities
 - ✅ Platform security and patching
 - ✅ Infrastructure encryption
 - ✅ Threat detection and monitoring
 - ✅ Compliance certifications
 - ✅ Incident response
 
-### Customer Responsibilities
+### Application Team Responsibilities
 - ✅ RBAC policy configuration
-- ✅ Service Bus security (customer-owned)
-- ✅ ERP system security (customer-owned)
+- ✅ Service Bus security (owned by app team)
+- ✅ ERP system security (owned by app team)
 - ✅ Approval workflow management
 - ✅ User access reviews
 
@@ -729,13 +667,7 @@ flowchart TB
 ## Contact
 
 **Security Issues:**
-- 📧 security@continuum-ops.ai
-- 🔐 PGP Key: [Download](https://continuum-ops.ai/.well-known/pgp-key.txt)
-- 🐛 Bug Bounty: [Program Details](https://continuum-ops.ai/security/bug-bounty)
-
-**Compliance Questions:**
-- 📧 compliance@continuum-ops.ai
-- 📄 Trust Center: [trust.continuum-ops.ai](https://trust.continuum-ops.ai)
+- **Mayank Gupta** - [mayank.h.gupta@capgemini.com](mailto:mayank.h.gupta@capgemini.com)
 
 ---
 
@@ -747,4 +679,4 @@ flowchart TB
 
 ---
 
-**© 2026 Continuum-Ops Inc. | SOC 2 Type II (in progress) | GDPR Compliant**
+**© 2026 Continuum-Ops**

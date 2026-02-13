@@ -2,7 +2,7 @@
 
 ## Document Purpose
 
-This manual is for **operations engineers, platform administrators, and integration teams** who will use Continuum-Ops in their day-to-day work. For deployment instructions, see **[06-Deployment-Guide.md](06-Deployment-Guide.md)**.
+This manual is for **operations engineers, platform administrators, and application teams** who will use Continuum-Ops in their day-to-day work. For deployment instructions, see **[02-Deployment-Guide.md](02-Deployment-Guide.md)**.
 
 ---
 
@@ -36,16 +36,16 @@ flowchart LR
     subgraph Automated[Continuum-Ops Handles]
         DETECT[Detection]
         DIAGNOSE[Diagnosis]
-        LOWRISK[Low-Risk Repairs]
+        LOWRISK["Low-Risk Repairs"]
         VERIFY[Verification]
-        RCA[RCA Generation]
+        RCA["RCA Generation"]
     end
     
     subgraph YourRole[You Handle]
-        APPROVE[Approve High-Risk Actions]
-        TUNE[Tune Policies]
-        REVIEW[Review RCAs]
-        ESCALATE[Handle Complex Issues]
+        APPROVE["Approve High-Risk Actions"]
+        TUNE["Tune Policies"]
+        REVIEW["Review RCAs"]
+        ESCALATE["Handle Complex Issues"]
     end
     
     DETECT --> DIAGNOSE
@@ -68,16 +68,16 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Detected: System detects<br/>DLQ spike
+    [*] --> Detected: Azure Monitor detects<br/>DLQ spike
     
-    Detected --> Diagnosing: Collecting evidence
+    Detected --> Diagnosing: Agent starts<br/>investigation
     Diagnosing --> AwaitingYourApproval: Medium/High risk
     Diagnosing --> AutoRepairing: Low risk,<br/>high confidence
     
     AwaitingYourApproval --> Approved: You click Approve
     AwaitingYourApproval --> Rejected: You click Reject
     
-    Approved --> Repairing: Executing actions
+    Approved --> Repairing: Executing tools
     AutoRepairing --> Repairing
     
     Repairing --> Verified: Success!
@@ -129,27 +129,27 @@ flowchart LR
 ### Sample Approval Card
 
 ```
-╔════════════════════════════════════════════╗
-║   🚨 Incident Approval Required            ║
-╠════════════════════════════════════════════╣
-║ Integration: orders-to-erp                 ║
-║ Environment: Production                    ║
-║                                            ║
-║ 📋 Root Cause:                             ║
-║   Customer CUS-12345 not found in ERP      ║
-║                                            ║
-║ 🔧 Proposed Actions:                       ║
-║   1. Create customer CUS-12345             ║
-║   2. Replay 3 messages from DLQ            ║
-║                                            ║
-║ 📊 Confidence: 86%                         ║
-║ ⚠️  Risk Level: Medium                     ║
-║                                            ║
-║ 🕒 Detected: 2 minutes ago                 ║
-║ 📍 DLQ Messages: 3                         ║
-║                                            ║
-║ [✅ Approve]  [❌ Reject]  [📖 View Details]║
-╚════════════════════════════════════════════╝
+╔══════════════════════════════════════════════╗
+║         Incident Approval Required           ║
+╠══════════════════════════════════════════════╣
+║ Integration: orders-to-erp                   ║
+║ Environment: Production                      ║
+║                                              ║
+║    Root Cause:                               ║
+║    Customer CUS-12345 not found in ERP       ║
+║                                              ║
+║   Proposed Actions:                          ║
+║   1. Create customer CUS-12345               ║
+║   2. Replay 3 messages from DLQ              ║
+║                                              ║
+║  Confidence: 86%                             ║
+║  Risk Level: Medium                          ║
+║                                              ║
+║  Detected: 2 minutes ago                     ║
+║  DLQ Messages: 3                             ║
+║                                              ║
+║ [✅ Approve]  [❌ Reject]  [📖 Details]     ║
+╚══════════════════════════════════════════════╝
 ```
 
 ### Approval Decision Guide
@@ -378,22 +378,22 @@ customEvents
 
 ```mermaid
 flowchart TD
-    SYMPTOM[DLQ messages but<br/>no incidents]
+    SYMPTOM["DLQ messages but<br/>no incidents"]
     
-    SYMPTOM --> CHECK1{Is integration<br/>registered?}
-    CHECK1 -->|No| FIX1[Add to Integration Registry<br/>via API or discovery]
+    SYMPTOM --> CHECK1{"Is integration<br/>registered?"}
+    CHECK1 -->|No| FIX1["Add to Integration Registry<br/>via API or discovery"]
     CHECK1 -->|Yes| CHECK2
     
-    CHECK2{Is monitoring<br/>enabled?}
-    CHECK2 -->|No| FIX2[Set enabled: true in policy]
+    CHECK2{"Is monitoring<br/>enabled?"}
+    CHECK2 -->|No| FIX2["Set enabled: true in policy"]
     CHECK2 -->|Yes| CHECK3
     
-    CHECK3{Is Watcher Agent<br/>running?}
-    CHECK3 -->|No| FIX3[Check Function App health<br/>Review App Insights logs]
+    CHECK3{"Is Azure Monitor<br/>Alert Active?"}
+    CHECK3 -->|No| FIX3["Check Alert Rule<br/>in Azure Portal"]
     CHECK3 -->|Yes| CHECK4
     
-    CHECK4{Are thresholds<br/>too high?}
-    CHECK4 -->|Yes| FIX4[Lower DLQ threshold<br/>from 10 to 3 messages]
+    CHECK4{"Are thresholds<br/>too high?"}
+    CHECK4 -->|Yes| FIX4["Lower DLQ threshold<br/>from 10 to 3 messages"]
 ```
 
 **Action**: Query Integration Registry
@@ -424,24 +424,24 @@ curl -X GET "https://func-continuumops-prod.azurewebsites.net/api/integrations?i
 
 ```mermaid
 sequenceDiagram
-    participant WATCHER as Watcher Agent
-    participant DECISION as Decision Agent
+    participant MONITOR as Azure Monitor
+    participant COORDINATOR as Coordinator Agent
     participant CB as Circuit Breaker
     
-    WATCHER->>DECISION: Incident detected
-    DECISION->>CB: Check state
-    CB-->>DECISION: OPEN (5 failures)
-    DECISION-->>WATCHER: Reject - Circuit Open
+    MONITOR->>COORDINATOR: Incident Alert
+    COORDINATOR->>CB: Check state
+    CB-->>COORDINATOR: OPEN (5 failures)
+    COORDINATOR-->>MONITOR: Reject - Circuit Open
     
     Note over CB: Reset after 30 min timeout
     
     CB->>CB: Timeout elapsed
     CB->>CB: State = HALF-OPEN
     
-    WATCHER->>DECISION: Next incident
-    DECISION->>CB: Check state
-    CB-->>DECISION: HALF-OPEN (test mode)
-    DECISION->>DECISION: Attempt repair
+    MONITOR->>COORDINATOR: Next incident
+    COORDINATOR->>CB: Check state
+    CB-->>COORDINATOR: HALF-OPEN (test mode)
+    COORDINATOR->>COORDINATOR: Attempt repair
     
     alt Repair succeeds
         CB->>CB: State = CLOSED
@@ -674,22 +674,10 @@ flowchart TD
     CHECK -->|Incorrect Diagnosis| L4[Review AI prompt<br/>Add to training data]
     
     L1 & L2 --> DOC[Check documentation<br/>User Manual + Architecture]
-    L3 --> PLAT[Platform Team<br/>platform-ops@company.com]
-    L4 --> AI[AI/ML Team<br/>ai-ops@company.com]
     
     DOC --> SOLVED{Resolved?}
-    SOLVED -->|No| SLACK[Post in Slack<br/>#continuum-ops]
     SOLVED -->|Yes| END[Document solution]
 ```
-
-### Contact Information
-
-- **Slack Channel**: `#continuum-ops`
-- **Email Support**: `continuum-ops-support@company.com`
-- **Escalation**: `platform-ops@company.com`
-- **On-Call**: Check PagerDuty schedule
-
----
 
 ## Appendix: Teams Adaptive Card Interactions
 
@@ -712,9 +700,3 @@ flowchart TD
 4. Return to Teams to approve/reject
 
 ---
-
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2026-02-12 | Initial user manual |
