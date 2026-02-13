@@ -614,6 +614,13 @@ flowchart TB
     LESSONS[Lessons Learned<br/>Post-mortem]
     
     DETECT --> TRIAGE
+    TRIAGE --> CONTAIN
+    CONTAIN --> INVESTIGATE
+    INVESTIGATE --> REMEDIATE
+    REMEDIATE --> RECOVER
+    RECOVER --> LESSONS
+```
+
 ---
 
 ## Shared Responsibility Model
