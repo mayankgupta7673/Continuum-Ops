@@ -1,5 +1,5 @@
 # Continuum-Ops: API Reference
-## REST APIs, SDKs, and Webhooks
+## REST APIs and Webhooks
 
 ---
 
@@ -9,11 +9,14 @@ Continuum-Ops provides comprehensive APIs for:
 - **Management API** - Configure policies, integrations, and settings
 - **Query API** - Retrieve incidents, diagnoses, and audit logs
 - **Webhook API** - Receive real-time notifications
-- **SDKs** - .NET, TypeScript, Python client libraries
 
 **Base URL**: `https://func-continuumops-{env}-{region}.azurewebsites.net/api`
 
 **Authentication**: Azure AD OAuth 2.0 + Managed Identity
+
+> **API Versioning**: All endpoints are currently unversioned (v1 implicit). When breaking
+> changes are introduced, we will add a `/v2/` prefix. Clients should not hardcode URL paths
+> without being prepared for this migration.
 
 ---
 
@@ -22,17 +25,22 @@ Continuum-Ops provides comprehensive APIs for:
 ### Option 1: Managed Identity (Recommended)
 
 ```csharp
-// .NET SDK
+// .NET — using HttpClient with DefaultAzureCredential
 using Azure.Identity;
-using ContinuumOps.Sdk;
 
 var credential = new DefaultAzureCredential();
-var client = new ContinuumOpsClient(
-    new Uri("https://func-continuumops-prod-eastus.azurewebsites.net"),
-    credential
+var token = await credential.GetTokenAsync(
+    new Azure.Core.TokenRequestContext(new[] { "https://continuumops.azurewebsites.net/.default" })
 );
 
-var incidents = await client.Incidents.ListAsync(hours: 24);
+using var httpClient = new HttpClient();
+httpClient.DefaultRequestHeaders.Authorization = 
+    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.Token);
+
+var response = await httpClient.GetAsync(
+    "https://func-continuumops-prod-eastus.azurewebsites.net/api/incidents?hours=24"
+);
+var incidents = await response.Content.ReadAsStringAsync();
 ```
 
 ### Option 2: Service Principal
@@ -706,9 +714,17 @@ public bool VerifyWebhookSignature(string payload, string signature, string secr
 
 ---
 
-## SDKs
+## SDKs (Planned — Not Yet Published)
 
-### .NET SDK
+> **⚠️ These SDK packages do not exist yet.** The code samples below show the *planned* SDK
+> interface for post-MVP development. For now, call the REST API directly using
+> `HttpClient` (.NET), `fetch` (TypeScript), or `requests` (Python) with
+> `DefaultAzureCredential` for authentication.
+>
+> See [Authentication — Option 2: Service Principal](#option-2-service-principal) for
+> working `curl` examples you can adapt to any HTTP client.
+
+### .NET SDK (Planned)
 
 **Installation:**
 ```bash
@@ -746,7 +762,7 @@ await client.Runbooks.RegisterAsync(new Runbook
 });
 ```
 
-### TypeScript/JavaScript SDK
+### TypeScript/JavaScript SDK (Planned)
 
 **Installation:**
 ```bash
@@ -771,7 +787,7 @@ const incident = await client.incidents.get('inc-2026-02-13-001');
 console.log(`Root cause: ${incident.diagnosis.rootCause}`);
 ```
 
-### Python SDK
+### Python SDK (Planned)
 
 **Installation:**
 ```bash

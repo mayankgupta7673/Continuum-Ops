@@ -11,7 +11,8 @@ This document provides the **complete technical architecture** for Continuum-Ops
 - **[00-Product-Overview.md](00-Product-Overview.md)** - Product vision, internal value proposition
 - **[02-Deployment-Guide.md](02-Deployment-Guide.md)** - 30-minute deployment playbook
 - **[03-User-Manual.md](03-User-Manual.md)** - Operations guide for daily use
-- **[10-Implementation-Roadmap.md](10-Implementation-Roadmap.md)** - Development sprint plan
+- **[04-API-Reference.md](04-API-Reference.md)** - REST API endpoints
+- **[05-Security-Compliance.md](05-Security-Compliance.md)** - Security & compliance controls
 
 ---
 
@@ -111,18 +112,18 @@ Scenario: **Order message fails → agent diagnoses missing customer → creates
 sequenceDiagram
   autonumber
   participant SB as Service Bus (Topic/Sub + DLQ)
-  participant W as Watcher Agent (Functions)
+  participant AZMON as Azure Monitor (Detection)
   participant ORCH as Durable Orchestrator
   participant DIAG as Diagnosis Agent
   participant AOAI as Azure OpenAI
   participant COS as Cosmos DB
   participant REP as Repair Agent
   participant ERP as ERP / Master Data API
-  participant VER as Verification Agent
+  participant VER as Verify Agent
   participant TEAMS as Microsoft Teams
 
-  SB-->>W: DLQ spike / failure signal (order message dead-lettered)
-  W->>ORCH: StartIncident(correlationId, entity, messageId)
+  SB-->>AZMON: DLQ spike detected (Dynamic Threshold)
+  AZMON->>ORCH: Alert via Event Grid → StartIncident(alertId)
 
   ORCH->>DIAG: CollectEvidence(message peek, headers, traces)
   DIAG->>SB: Peek DLQ message (read-only)
@@ -160,23 +161,22 @@ sequenceDiagram
 
 ### Agent Topology
 
-We utilize the **Azure AI Agent Service** to host a "Coordinator" agent that manages specialized worker agents. This replaces custom orchestrators with a managed, scalable runtime.
+We use **3 specialized agents** coordinated by a **Durable Functions orchestrator**. Detection is offloaded entirely to Azure Monitor (zero LLM tokens).
 
 ```mermaid
 graph TB
-    subgraph Detection[Detection Layer]
-        AZMON[Azure Monitor<br/>Dynamic Thresholds<br/>Replaces Custom Watcher]
+    subgraph Detection[Detection Layer — No LLM]
+        AZMON["Azure Monitor<br/>Dynamic Thresholds (ML)<br/>Zero code, zero tokens"]
     end
 
-    subgraph AgentService[Azure AI Agent Service]
-        COORD["Coordinator Agent<br/>(Router & State Manager)"]
-        
-        subgraph Workers[Specialized Agents]
-            DIAG["Diagnostician<br/>(RCA & Reasoning)"]
-            PLAN["Planner<br/>(Safety & Sequencing)"]
-            EXEC["Executor<br/>(Tool Invocation)"]
-            LEARN["Learner<br/>(Pattern Updates)"]
-        end
+    subgraph Orchestration[Durable Functions Orchestrator]
+        ORCH["Orchestrator<br/>Routing · State · Policy Gates · Approvals<br/>⚡ Deterministic code, 0 LLM calls"]
+    end
+
+    subgraph Agents[AI Agents]
+        DIAG["🧠 Diagnosis Agent<br/>Evidence + RCA + Repair Plan<br/>1 GPT-4o call"]
+        REPAIR["🔧 Repair Agent<br/>Tool Execution<br/>⚡ Deterministic, 0 LLM calls"]
+        VERIFY["✅ Verify Agent<br/>Outcome Validation + Pattern Learning<br/>1 GPT-4o call"]
     end
 
     subgraph Skills[Tooling / Skills]
@@ -184,51 +184,51 @@ graph TB
         SEARCH["Vector Search<br/>Azure AI Search"]
     end
     
-    AZMON -->|Alert Webhook| COORD
-    COORD -->|Delegates| DIAG
-    DIAG -->|Queries| SEARCH
-    DIAG -->|Output| PLAN
-    PLAN -->|Plan| COORD
-    COORD -->|Approves| EXEC
-    EXEC -->|Calls| OPENAPI
-    EXEC -->|Result| LEARN
-    LEARN -->|Updates| SEARCH
+    AZMON -->|Alert via Event Grid| ORCH
+    ORCH -->|Collect evidence + diagnose| DIAG
+    DIAG -->|Queries patterns| SEARCH
+    DIAG -->|Diagnosis + plan| ORCH
+    ORCH -->|Execute plan| REPAIR
+    REPAIR -->|Calls tools| OPENAPI
+    REPAIR -->|Result| ORCH
+    ORCH -->|Verify outcome| VERIFY
+    VERIFY -->|Update patterns| SEARCH
+    VERIFY -->|Result| ORCH
     
     style AZMON fill:#FFD700,stroke:#FF8C00,stroke-width:2px
-    style AgentService fill:#50e6ff,stroke:#0078d4,stroke-width:3px
+    style Orchestration fill:#50e6ff,stroke:#0078d4,stroke-width:3px
+    style Agents fill:#50e6ff,stroke:#0078d4,stroke-width:2px
 ```
 
 ### Component Specifications
 
 #### 1. Detection: Azure Monitor (Dynamic Thresholds)
-*Instead of a custom "Watcher Agent", we leverage Azure's native ML capabilities.*
+*No custom code — we leverage Azure's native ML capabilities.*
 *   **Feature**: Azure Monitor Metric Alerts with Dynamic Thresholds.
 *   **Metric**: `DeadletterMessageCount`, `ActiveMessageCount`.
 *   **Configuration**: High Sensitivity.
-*   **Action**: Calls Continuum-Ops Webhook (starts investigation workflow).
-*   **Benefit**: Zero code to maintain, built-in seasonality learning.
+*   **Action**: Fires alert → Event Grid → Durable Functions Orchestrator.
+*   **Benefit**: Zero code to maintain, built-in seasonality learning, zero LLM tokens.
 
-#### 2. Coordinator Agent (Azure AI Agent Service)
-*   **Role**: The entry point for all incidents.
-*   **Responsibility**: Maintains conversation state, routes tasks to sub-agents, and handles "Human-in-the-loop" transitions.
-*   **Implementation**: Azure AI Agent configured with `Router` instructions.
+#### 2. Durable Functions Orchestrator (Deterministic Code)
+*   **Role**: The entry point for all incidents. Replaces what earlier drafts called a "Coordinator Agent".
+*   **Responsibility**: State management, routing tasks to agents, policy gates, approval flow, error handling.
+*   **Implementation**: Azure Durable Functions (.NET 8) — deterministic code, zero LLM calls.
+*   **Idempotency**: Uses `alertId` as orchestration instance ID for deduplication.
 
-#### 3. Diagnostician Agent
-*   **Role**: Root Cause Analysis.
+#### 3. Diagnosis Agent (GPT-4o — 1 LLM Call)
+*   **Role**: Evidence collection, Root Cause Analysis, and repair planning (combined into a single agent call).
 *   **Tools**: 
+    *   `peek_dlq_message` (Service Bus read-only peek)
     *   `query_logs` (App Insights via KQL)
-    *   `search_patterns` (Azure AI Search)
-*   **Model**: GPT-4 Turbo (or GPT-4o for complex reasoning).
+    *   `search_patterns` (Azure AI Search vector similarity)
+*   **Model**: GPT-4o (standardized — see [Technology Stack Summary](#technology-stack-summary)).
+*   **Output**: Structured JSON: `{root_cause, confidence, risk_level, evidence_citations[], repair_plan[]}`.
 
-#### 4. Executor Agent & Standardized Tooling
-*Instead of proprietary MCP servers, we use standard Azure Functions with OpenAPI definitions.*
-*   **Decision**: We deliberately chose **OpenAPI** over the emerging Model Context Protocol (MCP) for the discovery layer.
-*   **Rationale**:
-    *   **Maturity**: OpenAPI (Swagger) is the industry standard for REST APIs, supported natively by Azure Functions, Logic Apps, and Power Platform.
-    *   **Ecosystem**: Every Azure service emits OpenAPI definitions; MCP is still experimental and lacks native Azure integration.
-    *   **Security**: OpenAPI integrates directly with Azure AD (Entra ID) authentication flows, whereas MCP requires custom transport security.
-*   **Implementation**: Azure Functions (.NET 8) exposing Swagger/OpenAPI.
-*   **Integration**: Azure AI Agents ingest the OpenAPI spec to understand available tools.
+#### 4. Repair Agent (Deterministic Code — 0 LLM Calls)
+*   **Role**: Execute the repair plan proposed by the Diagnosis Agent.
+*   **Implementation**: Deterministic .NET code that calls Azure Functions via OpenAPI definitions. No LLM involved.
+*   **Key Properties**: Idempotent execution, graceful failure reporting, no autonomous retries.
 
 **Tool Interface (OpenAPI):**
 ```yaml
@@ -251,9 +251,203 @@ paths:
           type: integer
 ```
 
+**OpenAPI vs MCP Decision:**
+*   We deliberately chose **OpenAPI** over the emerging Model Context Protocol (MCP) for tool definitions.
+*   **Rationale**: OpenAPI is the industry standard, natively supported by Azure Functions/Logic Apps/Power Platform. MCP is still experimental and lacks native Azure integration. OpenAPI integrates directly with Azure AD (Entra ID) authentication flows.
+
+#### 5. Verify Agent (GPT-4o — 1 LLM Call, Conditional)
+*   **Role**: Validate that the repair achieved the desired business outcome, then extract a learning pattern.
+*   **Runs**: Only if the Repair Agent succeeded. Skipped if repair failed.
+*   **Tools**: `check_dlq_depth` (Service Bus), `query_erp` (ERP API), `upsert_pattern` (AI Search + Cosmos DB).
+*   **Model**: GPT-4o.
+*   **Output**: Structured JSON: `{verified: bool, evidence, failure_reason?, pattern_summary}`.
+
+---
+
+## Alert Ingestion: Async Buffer (Event Grid)
+
+> **Critical design decision**: Azure Monitor does NOT call our Function App webhook directly.
+> Alerts go through Azure Event Grid first, providing reliable delivery with retry.
+
+### Why This Matters
+
+Azure Monitor Action Group webhooks have a **30-second timeout**. If our Function App has a cold start (5–15 sec on EP1) plus initial Cosmos DB read (1–2 sec), the webhook can timeout and the alert is lost.
+
+### Ingestion Flow
+
+```mermaid
+flowchart LR
+    AZMON[Azure Monitor<br/>Alert fires] -->|Action Group| EG[Event Grid<br/>Topic]
+    EG -->|Push with retry<br/>30s, 1m, 5m, 30m| FUNC[HTTP Trigger<br/>Function]
+    FUNC -->|Start orchestration| DURABLE[Durable Functions<br/>Orchestrator]
+    
+    style EG fill:#FFD700,stroke:#FF8C00,stroke-width:2px
+```
+
+**Event Grid provides:**
+- At-least-once delivery with exponential backoff retry (up to 24 hours)
+- Dead-letter queue for failed deliveries → alerts are never silently lost
+- Native Azure Monitor integration (Action Group → Event Grid is a built-in option)
+- Filtering: only forward alerts matching our subscriptions
+
+**Alternative considered**: Azure Service Bus queue as buffer. Rejected because Event Grid is lower-latency for event-driven push and avoids adding another Service Bus dependency.
+
+**Idempotency**: The Durable Functions orchestrator uses `alertId` from Azure Monitor as the orchestration instance ID. If Event Grid retries a delivery, the second `StartNewAsync(alertId)` call is a no-op because Durable Functions deduplicates by instance ID.
+
+---
+
+## Failure Handling
+
+Every external dependency can fail. Here's what happens for each:
+
+### Azure OpenAI Failures
+
+| Failure | Detection | Response |
+|---------|-----------|----------|
+| **429 Too Many Requests** | HTTP status code | Retry with `Retry-After` header. If 3 retries fail, fall back to **pattern-match-only mode**: check AI Search for matching pattern, skip LLM reasoning. If no pattern match, escalate to Teams as "Manual diagnosis needed." |
+| **500/503 Service Error** | HTTP status code | Retry 3 times with exponential backoff (1s, 4s, 16s). If still failing, escalate incident to Teams with raw evidence (DLQ message + logs) for manual diagnosis. |
+| **Timeout (>30 sec)** | HTTP timeout | Cancel request, retry once. If second attempt times out, escalate. |
+| **Quota exhausted (daily)** | Token counter in Cosmos DB | Switch to **degraded mode**: detection continues, all incidents are escalated to Teams with evidence bundle but no AI diagnosis. Log alert: "LLM quota exhausted." |
+
+### Cosmos DB Failures
+
+| Failure | Detection | Response |
+|---------|-----------|----------|
+| **429 Throttled** | HTTP 429 from SDK | SDK auto-retries (built into Azure Cosmos DB .NET SDK). If RU/s consistently maxed, autoscale kicks in (4K → 40K RU/s). |
+| **Partition unavailable** | SDK exception | Durable Functions orchestration pauses and retries automatically (built-in). Incident state is preserved in orchestration history. |
+| **Write conflict** | HTTP 409 | Use optimistic concurrency with `_etag`. Retry read-modify-write cycle. |
+
+### ERP / Downstream API Failures
+
+| Failure | Detection | Response |
+|---------|-----------|----------|
+| **ERP returns 5xx** | HTTP status | Repair Agent retries 3 times with backoff. If still failing, mark repair as `failed`, notify Teams: "Repair blocked — ERP unavailable." Do NOT retry DLQ replay (data fix hasn't happened yet). |
+| **ERP timeout (>30 sec)** | HTTP timeout | Same as 5xx. ERP slowness is common (esp. SAP). Configurable timeout per integration policy (default 60s). |
+| **ERP returns 4xx (bad data)** | HTTP status | Do NOT retry. Log as diagnosis error (AI proposed wrong fix). Escalate to Teams. Feed back to learning: "this plan failed for this evidence pattern." |
+
+### Teams Webhook Failures
+
+| Failure | Detection | Response |
+|---------|-----------|----------|
+| **Webhook URL invalid/expired** | HTTP 4xx | Log error. Fall back to email notification (if configured in policy). Store pending approval in Cosmos DB for API-based approval. |
+| **Teams service outage** | HTTP 5xx / timeout | Retry 3 times. If failing, queue approval request in Cosmos DB. Expose pending approvals via `GET /api/approvals/pending` so operators can approve via API or portal. |
+
+### Circuit Breaker (Per-Integration)
+
+Circuit breaker state is stored in the `Policies` container in Cosmos DB:
+
+```
+CLOSED → (5 consecutive repair failures) → OPEN
+OPEN → (30 min timeout) → HALF-OPEN
+HALF-OPEN → (1 test repair succeeds) → CLOSED
+HALF-OPEN → (test repair fails) → OPEN
+```
+
+When circuit is **OPEN**: incidents are still detected and diagnosed, but repair is skipped. Teams notification says: "Circuit breaker open for {integration}. Manual intervention required."
+
+---
+
+## Agent Design Rationale: Why 3 Agents Save Tokens
+
+> **Canonical agent count: 3 specialized agents + 1 Durable Functions orchestrator.**
+> Earlier drafts of this project described 7 separate micro-agents (Watcher, Analyzer,
+> Diagnostician, Planner, Executor, Verifier, Learner). We consolidated to 3 for cost
+> and reliability reasons. This section is the authoritative reference.
+
+### The Problem with Many Agents
+
+Every LLM call has fixed token overhead:
+- **System prompt**: 200–800 tokens (agent identity, rules, tool schemas)
+- **Function/tool definitions**: 100–400 tokens per tool
+- **Conversation context**: grows with each agent-to-agent handoff
+
+With 7 agents in a chain, you pay this overhead 7 times per incident. Worse, inter-agent messages ("Analyzer → Diagnostician: here's the evidence") duplicate data across calls.
+
+### Our 3-Agent Design
+
+| Agent | LLM Calls | System Prompt | Input Context | Output |
+|-------|-----------|---------------|---------------|--------|
+| **Diagnosis Agent** | 1 call | ~500 tokens (focused RCA instructions) | DLQ message body (truncated to 1K chars) + App Insights errors (top 5, ~500 chars) + similar patterns from AI Search (top 3, ~300 chars) | Structured JSON: `{root_cause, confidence, risk_level, repair_plan[]}` |
+| **Repair Agent** | 0 LLM calls (deterministic) | N/A — this is code, not an LLM agent | Action plan from Diagnosis Agent | Executes OpenAPI tools, returns success/failure |
+| **Verify Agent** | 1 call (only if repair succeeded) | ~200 tokens (outcome validation) | Expected outcome + current state (DLQ depth, ERP query result) | Structured JSON: `{verified: bool, evidence, failure_reason?}` |
+
+**The Durable Functions Orchestrator** handles all routing, state management, policy gates, approval flow, and error handling — **zero LLM tokens** for orchestration.
+
+### Token Budget Per Incident
+
+```
+Diagnosis Agent:
+  System prompt:           ~500 tokens
+  Input (evidence bundle): ~1,800 tokens (truncated)
+  Output (structured JSON):  ~300 tokens
+  Subtotal:                ~2,600 tokens
+
+Verify Agent (if repair runs):
+  System prompt:           ~200 tokens
+  Input (state check):     ~400 tokens
+  Output (structured JSON):  ~100 tokens
+  Subtotal:                  ~700 tokens
+
+Pattern shortcut (if AI Search match > 0.90 similarity):
+  Skip Diagnosis Agent reasoning, use cached plan
+  Cost: ~500 tokens (embedding query only)
+
+TOTAL PER INCIDENT:        ~2,600–3,300 tokens (normal)
+                           ~500 tokens (pattern cache hit)
+```
+
+**Cost comparison at GPT-4o rates ($2.50/1M input, $10/1M output):**
+
+| Design | Tokens/incident | Cost/incident | Cost at 100 incidents/day |
+|--------|----------------|---------------|--------------------------|
+| 7 micro-agents (old design) | ~8,000–15,000 | $0.02–0.06 | $2–6/day |
+| **3 focused agents (current)** | **~2,600–3,300** | **$0.007–0.01** | **$0.70–1.00/day** |
+| Single god-agent | ~6,000–10,000 | $0.02–0.04 | $2–4/day |
+
+### Why Not a Single Agent?
+
+A single agent with all tools and all context seems simpler, but:
+1. **Prompt bloat**: One agent needs ALL tool definitions (replay, create customer, query logs, search patterns, verify ERP) = ~2,000 tokens of function schemas in every call, even when only diagnosing.
+2. **Hallucination risk**: An agent with both "diagnose" and "execute" capabilities may try to execute during diagnosis if the prompt isn't perfectly constrained.
+3. **Auditability**: Separate agents produce clean audit trail entries — "Diagnosis Agent said X" vs "Repair Agent did Y" — critical for compliance.
+
+### Detection Layer: No LLM Needed
+
+Azure Monitor Dynamic Thresholds replace a custom "Watcher Agent" entirely:
+- Zero token cost for detection
+- Built-in ML seasonality learning
+- No code to maintain or prompt to tune
+
 ---
 
 ## Data Architecture
+
+### Deployment Model: Single-Tenant
+
+> **Decision**: Continuum-Ops is deployed **one instance per Azure subscription**
+> (single-tenant). Earlier drafts referenced multi-tenant partition keys (`tenantId`).
+> This has been removed. Single-tenant simplifies security (data isolation by subscription),
+> partition key design, and RBAC. Multi-tenant can be revisited post-pilot if needed.
+
+### Vector Storage: AI Search Is the Single Source of Truth
+
+> **Decision**: Vector embeddings for pattern matching live **only in Azure AI Search**.
+> Cosmos DB `Patterns` container stores structured metadata (success rate, occurrence count,
+> typical actions) but does NOT store embeddings. This avoids dual-storage sync issues.
+>
+> **Data flow**: When a pattern is learned, the orchestrator writes metadata to Cosmos DB
+> AND upserts the embedding to AI Search in a single transaction-like operation. If either
+> write fails, the pattern update is retried. Cosmos DB is the source of truth for pattern
+> metadata; AI Search is the source of truth for similarity search.
+
+### Evidence Retention vs. Learning
+
+> **Problem**: Evidence has a 90-day TTL, but the Learner needs historical data.
+>
+> **Solution**: When an incident closes successfully, the orchestrator extracts a
+> **compact evidence summary** (~200 chars) and writes it to the `Patterns` container
+> (`evidence_summary` field) and AI Search index. This summary survives the 90-day
+> evidence TTL. Full raw evidence still expires after 90 days per retention policy.
 
 ### Cosmos DB Container Design
 
@@ -269,7 +463,6 @@ erDiagram
     
     INCIDENTS {
         string id PK
-        string tenantId
         string integrationId
         string status
         datetime detected_at
@@ -309,17 +502,16 @@ erDiagram
         string signature_hash
         string integrationId
         string root_cause_category
+        string evidence_summary
         array typical_actions
         float success_rate
         int occurrence_count
         datetime last_seen
-        object vector_embedding
     }
     
     INTEGRATIONS {
         string id PK
         string integrationId
-        string tenantId
         string environment
         object servicebus_config
         bool autoheal_enabled
@@ -359,10 +551,12 @@ erDiagram
 ```
 
 **Partition Keys**:
-- `Incidents`: `/integrationId` (co-locates all incidents for same integration)
-- `Evidence`: `/incidentId` (co-locates evidence with parent incident)
-- `Patterns`: `/integrationId` (efficient pattern lookup per integration)
-- `Integrations`: `/tenantId` (multi-tenant isolation)
+- `Incidents`: `/integrationId` — co-locates all incidents for same integration. For cross-integration queries (`GET /api/incidents?hours=24`), use a Cosmos DB [change feed](https://learn.microsoft.com/en-us/azure/cosmos-db/change-feed) to project recent incidents into a `RecentIncidents` materialized view partitioned by `/yearMonth` for efficient time-range queries.
+- `Evidence`: `/incidentId` — co-locates evidence with parent incident
+- `Patterns`: `/integrationId` — efficient pattern lookup per integration
+- `Integrations`: `/environment` — small container, any partition key works
+- `Policies`: `/integrationId` — 1:1 with integration
+- `AuditEvents`: `/yearMonth` — enables efficient time-range queries and archival. Events older than 1 year are archived to Blob Storage via a timer-triggered Function.
 
 ### AI Search Index (Semantic Memory)
 
@@ -418,7 +612,7 @@ var results = await searchClient.SearchAsync<IncidentPattern>(null, searchOption
 
 ## Infrastructure Architecture
 
-### Multi-Tenant Deployment
+### Production Deployment
 
 ```mermaid
 C4Deployment
@@ -426,7 +620,7 @@ C4Deployment
 
     Deployment_Node(azure, "Azure Cloud", "East US Region") {
         Deployment_Node(func_plan, "Azure Functions Premium Plan", "EP2, 2 instances") {
-            Container(agents, "AI Agent Functions", ".NET 8", "All agent implementations")
+            Container(agents, "AI Agent Functions", ".NET 8", "Diagnosis, Repair, Verify agents")
             Container(orchestrator, "Durable Functions", ".NET 8", "Incident orchestration")
         }
         
@@ -436,8 +630,8 @@ C4Deployment
         }
         
         Deployment_Node(ai, "AI Services") {
-            Container(openai, "Azure OpenAI", "GPT-4 Turbo", "Reasoning engine")
-            Container(aifoundry, "AI Foundry", "Agent orchestration", "Multi-agent framework")
+            Container(openai, "Azure OpenAI", "GPT-4o", "Reasoning engine")
+            Container(aifoundry, "AI Foundry", "Agent orchestration", "Agent hosting")
         }
         
         Deployment_Node(gateway, "API Gateway") {
@@ -445,8 +639,8 @@ C4Deployment
         }
     }
     
-    Deployment_Node(customer_env, "Business Unit Tenant", "Cross-subscription") {
-        System_Ext(sb, "Service Bus", "Business Unit namespaces")
+    Deployment_Node(customer_env, "Target Environment", "Same or cross-subscription") {
+        System_Ext(sb, "Service Bus", "Integration namespaces")
         System_Ext(erp, "ERP", "Dynamics 365, SAP")
     }
     
@@ -556,21 +750,80 @@ The platform is designed to be deployed directly into the project's Azure subscr
 
 ## Technology Stack Summary
 
+> **LLM Model Decision**: We standardize on **GPT-4o** for all LLM calls.
+> Earlier drafts mixed GPT-4 Turbo, GPT-4o, and GPT-4 Turbo with Vision.
+> GPT-4o is faster, cheaper, and multimodal — there is no reason to use older models.
+
 | Category | Technology | Version | Purpose |
 |----------|-----------|---------|---------|
-| **AI Orchestration** | Azure AI Foundry | Preview | Multi-agent system |
-| **LLM** | Azure OpenAI GPT-4 Turbo | 1106-preview | Reasoning, diagnosis |
-| **LLM (Advanced)** | Azure OpenAI GPT-4o | Latest | Chain-of-thought reasoning |
-| **AI Framework** | Semantic Kernel | 1.x | Agent development |
-| **LLM Workflows** | Prompt Flow | 1.x | Visual LLM pipelines |
-| **Orchestration** | Durable Functions | 2.x | Stateful workflows |
+| **LLM** | Azure OpenAI GPT-4o | Latest GA | All diagnosis and verification calls |
+| **AI Orchestration** | Azure AI Agent Service | Preview | Agent hosting (optional — can fall back to direct SDK calls) |
+| **AI Framework** | Semantic Kernel | 1.x | Agent development, tool calling |
+| **Orchestration** | Durable Functions | 2.x | Stateful incident workflows |
 | **Runtime** | .NET | 8.0 | Function App runtime |
-| **Database** | Cosmos DB | Core SQL API | Incidents, patterns, audit |
-| **Vector DB** | AI Search | Standard | Semantic memory |
-| **Observability** | Application Insights | Latest | Telemetry, monitoring |
-| **Identity** | Managed Identity | System-assigned | Zero-trust auth |
-| **Collaboration** | Microsoft Teams | Latest | Approval workflows |
+| **Async Buffer** | Azure Event Grid | GA | Reliable alert ingestion from Azure Monitor |
+| **Database** | Cosmos DB | Core SQL API | Incidents, patterns, policies, audit |
+| **Vector Search** | Azure AI Search | Standard | Semantic pattern recall (sole vector store) |
+| **Observability** | Application Insights | Latest | Telemetry, distributed tracing |
+| **Identity** | Managed Identity | System-assigned | Zero-trust auth for all data plane access |
+| **Approval UI** | Microsoft Teams | Adaptive Cards | Human-in-the-loop approval |
 | **IaC** | Bicep | 0.24+ | Infrastructure provisioning |
+
+> **Removed from stack**: Prompt Flow (unnecessary complexity for 2 LLM calls per incident).
+> If prompt orchestration becomes complex post-pilot, Prompt Flow can be re-added.
+
+---
+
+## Cost Management
+
+### Daily Token Budget
+
+A configurable daily token cap prevents runaway LLM costs during incident storms:
+
+| Setting | Default | Configurable Via |
+|---------|---------|-----------------|
+| `DailyTokenBudget` | 200,000 tokens | App Settings / Key Vault |
+| `DailyTokenWarningThreshold` | 150,000 tokens (75%) | App Settings |
+
+**Enforcement**: A Cosmos DB document (`token-usage-{date}`) tracks cumulative token usage. Each LLM call increments this counter atomically. When budget is exceeded:
+1. All new incidents switch to **pattern-match-only** mode (no LLM calls)
+2. Alert fires to Teams: "Daily LLM budget exhausted. Incidents will be escalated without AI diagnosis until midnight UTC."
+3. Detection and evidence collection continue normally
+4. Counter resets at midnight UTC
+
+### Monthly Cost Projections
+
+| Incident Volume | LLM Cost | Cosmos DB | AI Search | Functions (EP1) | Total |
+|-----------------|----------|-----------|-----------|-----------------|-------|
+| **10/day (pilot)** | ~$3/mo | ~$25/mo (serverless) | ~$75/mo (Basic) | ~$5/mo (Consumption) | **~$108/mo** |
+| **50/day (production)** | ~$15/mo | ~$50/mo (serverless) | ~$75/mo (Basic) | ~$175/mo (EP1) | **~$315/mo** |
+| **200/day (high volume)** | ~$60/mo | ~$200/mo (autoscale) | ~$250/mo (Standard) | ~$350/mo (EP2) | **~$860/mo** |
+
+### Cost Alerts
+
+Configure Azure Cost Management alerts:
+```bash
+# Alert when monthly spend exceeds $500
+az consumption budget create \
+  --budget-name continuumops-monthly \
+  --amount 500 \
+  --time-grain Monthly \
+  --resource-group rg-continuumops-prod-eastus \
+  --notifications '[{"enabled":true,"operator":"GreaterThan","threshold":80,"contactEmails":["ops-team@company.com"]}]'
+```
+
+---
+
+## Background Jobs
+
+| Job | Trigger | Schedule | Purpose |
+|-----|---------|----------|---------|
+| **Auto-Discovery** | Timer | Every 1 hour | Scan for new Service Bus namespaces tagged `AutoHeal=Enabled` |
+| **Audit Archival** | Timer | Daily at 02:00 UTC | Move AuditEvents older than 1 year from Cosmos DB to Blob Storage |
+| **Token Usage Reset** | Timer | Daily at 00:00 UTC | Reset daily token counter |
+| **Circuit Breaker Cleanup** | Timer | Every 15 min | Check and reset expired HALF-OPEN circuit breakers |
+| **Pattern Sync** | Change Feed | Continuous | Sync Cosmos DB pattern metadata to AI Search index on every pattern upsert |
+| **Health Check** | Timer | Every 5 min | Verify connectivity to Cosmos DB, Azure OpenAI, AI Search, Service Bus |
 
 ---
 
@@ -579,7 +832,7 @@ The platform is designed to be deployed directly into the project's Azure subscr
 - **[00-Product-Overview.md](00-Product-Overview.md)** - Product vision
 - **[02-Deployment-Guide.md](02-Deployment-Guide.md)** - Deployment playbook
 - **[03-User-Manual.md](03-User-Manual.md)** - Operations guide
-- **[10-Implementation-Roadmap.md](10-Implementation-Roadmap.md)** - Development plan
+- **[04-API-Reference.md](04-API-Reference.md)** - API endpoints
+- **[05-Security-Compliance.md](05-Security-Compliance.md)** - Security & compliance
 
 ---
-`````

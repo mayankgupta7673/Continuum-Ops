@@ -425,23 +425,23 @@ curl -X GET "https://func-continuumops-prod.azurewebsites.net/api/integrations?i
 ```mermaid
 sequenceDiagram
     participant MONITOR as Azure Monitor
-    participant COORDINATOR as Coordinator Agent
+    participant ORCH as Durable Orchestrator
     participant CB as Circuit Breaker
     
-    MONITOR->>COORDINATOR: Incident Alert
-    COORDINATOR->>CB: Check state
-    CB-->>COORDINATOR: OPEN (5 failures)
-    COORDINATOR-->>MONITOR: Reject - Circuit Open
+    MONITOR->>ORCH: Incident Alert
+    ORCH->>CB: Check state
+    CB-->>ORCH: OPEN (5 failures)
+    ORCH-->>MONITOR: Reject - Circuit Open
     
     Note over CB: Reset after 30 min timeout
     
     CB->>CB: Timeout elapsed
     CB->>CB: State = HALF-OPEN
     
-    MONITOR->>COORDINATOR: Next incident
-    COORDINATOR->>CB: Check state
-    CB-->>COORDINATOR: HALF-OPEN (test mode)
-    COORDINATOR->>COORDINATOR: Attempt repair
+    MONITOR->>ORCH: Next incident
+    ORCH->>CB: Check state
+    CB-->>ORCH: HALF-OPEN (test mode)
+    ORCH->>ORCH: Attempt repair
     
     alt Repair succeeds
         CB->>CB: State = CLOSED

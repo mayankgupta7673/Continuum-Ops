@@ -16,11 +16,11 @@
 ┌─────────────────────────────────────────────────────────────┐
 │  Traditional Ops         →         Continuum-Ops            │
 ├─────────────────────────────────────────────────────────────┤
-│  ⏰ 2-8 hours MTTR       →         ⚡ 5-15 minutes          │
-│  👤 Manual investigation  →         🤖 AI-powered diagnosis  │
-│  📱 Off-hours pages      →         🌙 24/7 autonomous heal  │
-│  📝 Reactive firefighting →         🎯 Proactive prevention │
-│  💸 High operational cost →         💰 Significant savings  │
+│  ⏰ 2-8 hours MTTR       →        ⚡ 5-15 minutes          │
+│  👤 Manual investigation  →       🤖 AI-powered diagnosis  │
+│  📱 Off-hours pages      →        🌙 24/7 autonomous heal  │
+│  📝 Reactive firefighting →        🎯 Proactive prevention │
+│  💸 High operational cost →        💰 Significant savings  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -29,15 +29,15 @@
 ## 🌟 Why Continuum-Ops?
 
 ### For Engineering Management
-- ✅ **95% MTTR Reduction**: From hours to minutes
+- ✅ **Significant MTTR Reduction**: From hours to minutes (validated during pilot)
 - ✅ **Ops Cost Savings**: AI does the toil work
 - ✅ **Zero Code Changes**: Works with existing integrations
-- ✅ **Enterprise-Grade Security**: SOC 2, GDPR, HIPAA ready
+- ✅ **Enterprise-Grade Security**: Zero-trust, Managed Identity, immutable audit trail
 
 ### For Operations Center
 - ✅ **No More 2AM Pages**: Autonomous healing 24/7
 - ✅ **Focus on Innovation**: AI handles repetitive incidents
-- ✅ **Built-in Expertise**: GPT-4 Turbo knows your patterns
+- ✅ **Built-in Expertise**: GPT-4o knows your patterns
 - ✅ **Transparent Decisions**: Full audit trail with explanations
 
 ### For Application Teams
@@ -86,23 +86,26 @@ Visit the internal portal to see the system in action.
 
 ## 🏗️ Architecture Highlights
 
-### AI-Native Architecture (Azure AI Agent Service)
+### AI-Native Architecture (3 Agents + Orchestrator)
 
 ```mermaid
 graph LR
     DETECT[Azure Monitor<br/>Dynamic Detection]
-    COORD[Coordinator Agent<br/>AI Agent Service]
-    DIAGNOSE[🧠 Diagnostician]
-    REPAIR[🔧 Executor]
+    ORCH[Durable Functions<br/>Orchestrator]
+    DIAGNOSE[🧠 Diagnosis Agent]
+    REPAIR[🔧 Repair Agent]
+    VERIFY[✅ Verify Agent]
     HUMAN[👤 Teams Approval]
     
-    DETECT -->|Alert| COORD
-    COORD -->|Delegates| DIAGNOSE
-    DIAGNOSE -->|Result| COORD
-    COORD -->|Action Plan| HUMAN
+    DETECT -->|Alert via Event Grid| ORCH
+    ORCH -->|Evidence + diagnose| DIAGNOSE
+    DIAGNOSE -->|Diagnosis + plan| ORCH
+    ORCH -->|Action Plan| HUMAN
     HUMAN -->|Approve| REPAIR
+    REPAIR -->|Result| ORCH
+    ORCH -->|Validate outcome| VERIFY
     
-    style COORD fill:#50e6ff,stroke:#0078d4,stroke-width:3px
+    style ORCH fill:#50e6ff,stroke:#0078d4,stroke-width:3px
     style DETECT fill:#FFD700,stroke:#FF8C00,stroke-width:2px
 ```
 
@@ -127,11 +130,11 @@ graph LR
 
 ### 🏗️ Technical Deep-Dive
 - **[Technical Architecture](docs/01-Technical-Architecture.md)** - System design, AI agents, data models
-- **[API Reference](docs/04-API-Reference.md)** - REST APIs, webhooks, SDKs
-- **[Integration Catalog](docs/06-Integration-Catalog.md)** - Supported systems & connectors
+- **[API Reference](docs/04-API-Reference.md)** - REST APIs, webhooks
 
 ### 🛡️ Enterprise & Compliance
-- **[Security & Compliance](docs/05-Security-Compliance.md)** - SOC 2, GDPR, HIPAA, zero-trust
+- **[Security & Compliance](docs/05-Security-Compliance.md)** - Zero-trust architecture, audit trail, data protection
+
 ## 🎨 Real-World Example
 
 ### Before Continuum-Ops
@@ -152,12 +155,12 @@ Total time: 3.5 hours | Human effort: Full investigation + remediation
 ```
 10:45 PM - Order messages start failing in Service Bus DLQ
 10:47 PM - Azure Monitor detects anomaly (Dynamic Thresholds)
-10:47 PM - AI Agent Service receives alert & wakes up
-10:48 PM - Diagnostician Agent queries logs & finds root cause
+10:47 PM - Durable Functions Orchestrator receives alert via Event Grid
+10:48 PM - Diagnosis Agent queries logs & finds root cause
 10:49 PM - Teams approval card sent (with evidence)
 10:52 PM - On-call engineer clicks "Approve"
-10:53 PM - Executor Agent runs "Create Customer" tool
-10:54 PM - System verifies heal & closes incident
+10:53 PM - Repair Agent runs "Create Customer" tool
+10:54 PM - Verify Agent confirms heal & closes incident
 
 Total time: 10 minutes | Human effort: 1-click approval
 ```

@@ -12,16 +12,15 @@ mindmap
   root((Continuum-Ops))
     AI-Powered
       Azure AI Foundry Agents
-      GPT-4 Turbo with Vision
+      GPT-4o
       Semantic Kernel
-      Prompt Flow
     Zero-Touch Operations
       Auto-discovery
       Self-configuration
       Adaptive learning
-      Predictive healing
+      Pattern-based healing
     Internal Value
-      95% MTTR reduction
+      Significant MTTR reduction
       ops cost savings
       Zero integration changes
       Continuous learning
@@ -83,7 +82,9 @@ flowchart TB
 
 ## 🎨 Product Architecture (Enterprise-Grade)
 
-### Multi-Agent System (Azure AI Foundry)
+### Agent Architecture (3 Agents + Orchestrator)
+
+Continuum-Ops uses a lean, cost-optimized agent design: **3 specialized agents** coordinated by a **Durable Functions orchestrator**. Detection is handled by Azure Monitor natively — zero LLM tokens for monitoring.
 
 ```mermaid
 graph TB
@@ -93,145 +94,95 @@ graph TB
         APPINSIGHTS[Application Insights<br/>Telemetry]
     end
     
-    subgraph AIFoundryAgents[Azure AI Foundry - Agent System]
-        SUPERVISOR["Supervisor Agent<br/>Orchestrates sub-agents"]
+    subgraph Detection[Detection Layer — No LLM]
+        AZMON["Azure Monitor<br/>Dynamic Thresholds (ML)<br/>Zero code, zero tokens"]
+    end
+    
+    subgraph Platform[Continuum-Ops Platform]
+        ORCH["Durable Functions Orchestrator<br/>Routing · State · Policy Gates · Approvals<br/>⚡ Deterministic code, 0 LLM calls"]
         
-        subgraph SpecializedAgents[Specialized Agents]
-            WATCHER["Watcher Agent<br/>Monitors health signals"]
-            ANALYZER["Analyzer Agent<br/>Correlates evidence"]
-            DIAGNOSTICIAN["Diagnostician Agent<br/>GPT-4 powered RCA"]
-            PLANNER["Planner Agent<br/>Creates repair plans"]
-            EXECUTOR["Executor Agent<br/>Safe remediation"]
-            VERIFIER["Verifier Agent<br/>Outcome validation"]
-            LEARNER["Learner Agent<br/>Pattern extraction"]
+        subgraph Agents[AI Agents]
+            DIAG["🧠 Diagnosis Agent<br/>Root Cause Analysis<br/>1 GPT-4o call (~2,600 tokens)"]
+            REPAIR["🔧 Repair Agent<br/>Tool Execution<br/>⚡ Deterministic code, 0 LLM calls"]
+            VERIFY["✅ Verify Agent<br/>Outcome Validation<br/>1 GPT-4o call (~700 tokens)"]
         end
         
-        MEMORY["Agent Memory Store<br/>Semantic Kernel + AI Search"]
-        TOOLS["Tool Registry<br/>Service Bus, ERP, etc."]
+        MEMORY["Agent Memory<br/>AI Search (vectors) + Cosmos DB (metadata)"]
+        TOOLS["Tool Registry<br/>Azure Functions · OpenAPI"]
     end
     
     subgraph Governance[Governance & Safety]
-        POLICY["Policy Engine<br/>Guardrails"]
-        APPROVAL["Human-in-Loop<br/>Teams Copilot"]
-        AUDIT["Audit Trail<br/>Immutable logs"]
+        POLICY["Policy Engine<br/>Confidence gates · Rate limits"]
+        APPROVAL["Human-in-Loop<br/>Teams Adaptive Cards"]
+        AUDIT["Audit Trail<br/>Immutable Cosmos DB logs"]
     end
     
-    SERVICEBUS -->|Failure signals| WATCHER
-    APPINSIGHTS -->|Telemetry| WATCHER
+    SERVICEBUS -->|Failure signals| AZMON
+    APPINSIGHTS -->|Telemetry| AZMON
     
-    WATCHER -->|Trigger| SUPERVISOR
-    SUPERVISOR -->|Coordinate| ANALYZER
-    ANALYZER -->|Evidence| DIAGNOSTICIAN
-    DIAGNOSTICIAN -->|Diagnosis| PLANNER
-    PLANNER -->|Check policy| POLICY
-    POLICY -->|Requires approval| APPROVAL
-    POLICY -->|Auto-approve| EXECUTOR
-    APPROVAL -->|Approved| EXECUTOR
-    EXECUTOR -->|Remediate| VERIFIER
-    VERIFIER -->|Learn| LEARNER
-    LEARNER -->|Update patterns| MEMORY
+    AZMON -->|Alert via Event Grid| ORCH
+    ORCH -->|Collect evidence + diagnose| DIAG
+    DIAG -->|Query patterns| MEMORY
+    DIAG -->|Diagnosis + plan| ORCH
     
-    MEMORY <-->|Context| SpecializedAgents
-    TOOLS <-->|Capabilities| SpecializedAgents
+    ORCH -->|Check policy| POLICY
+    POLICY -->|High confidence| REPAIR
+    POLICY -->|Low confidence| APPROVAL
+    APPROVAL -->|Approved| REPAIR
     
-    EXECUTOR -->|Execute| SERVICEBUS
-    EXECUTOR -->|Execute| APIM
+    REPAIR -->|Execute| TOOLS
+    REPAIR -->|Remediate| SERVICEBUS
+    REPAIR -->|Remediate| APIM
+    REPAIR -->|Result| ORCH
     
-    SUPERVISOR -.->|Log all actions| AUDIT
+    ORCH -->|Verify outcome| VERIFY
+    VERIFY -->|Update patterns| MEMORY
+    VERIFY -->|Result| ORCH
     
-    style AIFoundryAgents fill:#0078d4,stroke:#004578,stroke-width:4px,color:#fff
-    style SpecializedAgents fill:#50e6ff,stroke:#0078d4,stroke-width:2px
+    ORCH -.->|Log all actions| AUDIT
+    
+    style Detection fill:#FFD700,stroke:#FF8C00,stroke-width:2px
+    style Platform fill:#0078d4,stroke:#004578,stroke-width:4px,color:#fff
+    style Agents fill:#50e6ff,stroke:#0078d4,stroke-width:2px
     style Governance fill:#FFD700,stroke:#FF8C00,stroke-width:2px
 ```
 
-### Agent Capabilities (Powered by Azure AI Agent Service)
+### Why Only 3 Agents?
 
-#### 1. Detection (Azure Monitor)
-**Purpose**: Zero-latency monitoring with ML-based baselining.
-*   **Native Capability**: Replaces custom "Watcher" code. Automatically learns weekly/daily seasonality.
-*   **Trigger**: Fires webhook only when genuine behavioral anomalies occur.
+Every LLM call has fixed token overhead (system prompt, tool schemas, context). With 7 agents you pay that overhead 7× per incident. Our 3-agent design cuts token cost by **~70%**:
 
-#### 2. Coordinator Agent
-**Purpose**: Central nervous system.
-*   **Function**: Receives alerts, instantiates the incident context, and assigns work to specific agents.
-*   **Human Handoff**: Seamlessly brings humans into the loop via Teams when confidence is low.
+| Component | Role | LLM Cost |
+|-----------|------|----------|
+| **Azure Monitor** | Detection — ML-based anomaly detection | **$0** (no LLM) |
+| **Durable Functions Orchestrator** | Routing, state, policy gates, approvals | **$0** (deterministic code) |
+| **Diagnosis Agent** | Evidence collection + Root Cause Analysis + repair planning | **~2,600 tokens** (1 GPT-4o call) |
+| **Repair Agent** | Execute OpenAPI tools (replay, create data, etc.) | **$0** (deterministic code) |
+| **Verify Agent** | Validate business outcome + update patterns | **~700 tokens** (1 GPT-4o call) |
 
-#### 3. Diagnostician Agent
-**Purpose**: Deep reasoning and Root Cause Analysis.
-*   **Capabilities**:
-    *   **Log Analysis**: Queries App Insights to correlate errors.
-    *   **Pattern Matching**: "I've seen this error 5 times before, it's usually a data issue."
-    *   **Evidence Citation**: Points to specific log lines driving the conclusion.
+> **Total cost per incident: ~$0.01** at GPT-4o rates. See [Technical Architecture — Token Budget](01-Technical-Architecture.md#token-budget-per-incident) for full breakdown.
 
-**Prompt Flow Integration**:
-```yaml
-# Diagnostic Workflow (Prompt Flow)
-name: DiagnosticWorkflow
-inputs:
-  - incident_context
-  - evidence_bundle
-  
-nodes:
-  - name: evidence_analysis
-    type: llm
-    model: gpt-4-turbo
-    prompt: |
-      Analyze the following integration failure evidence...
-      
-  - name: pattern_matching
-    type: semantic_search
-    index: historical_incidents
-    top_k: 5
-    
-  - name: root_cause_synthesis
-    type: llm
-    model: gpt-4o
-    prompt: |
-      Given evidence and similar historical incidents, determine root cause...
-      
-  - name: confidence_calibration
-    type: python
-    code: calibrate_confidence(diagnosis, historical_accuracy)
+### Agent Capabilities
 
-outputs:
-  - diagnosis
-  - confidence_score
-  - evidence_citations
-```
+#### 1. Detection (Azure Monitor — No Code)
+- **ML-based Dynamic Thresholds** on `DeadletterMessageCount`, `ActiveMessageCount`
+- Automatically learns weekly/daily seasonality
+- Fires alerts only for genuine anomalies → Event Grid → Durable Functions
 
-#### 4. Planner Agent
-**Purpose**: Create safe, sequenced repair plans
+#### 2. Diagnosis Agent (GPT-4o)
+- **Evidence Collection**: Peeks DLQ messages, queries App Insights (KQL), searches historical patterns (AI Search)
+- **Root Cause Analysis**: Identifies why messages failed with evidence citations
+- **Repair Planning**: Proposes sequenced action plan with confidence score and risk level
+- **Pattern Matching**: "I've seen this 5 times before — it's usually missing master data" (95% success rate)
 
-**AI Capabilities**:
-- ✨ **Task decomposition** (breaks complex repairs into steps)
-- ✨ **Dependency analysis** (understands action ordering)
-- ✨ **Risk assessment** (predicts blast radius)
-- ✨ **Rollback planning** (compensation strategies)
+#### 3. Repair Agent (Deterministic Code)
+- **Idempotent Execution**: Checks if action already executed before running
+- **OpenAPI Tools**: Calls Azure Functions (replay message, create customer, isolate poison message)
+- **Graceful Failure**: Reports success/failure back to orchestrator; does NOT retry autonomously
 
-#### 5. Executor Agent
-**Purpose**: Idempotent, safe action execution
-
-**AI Capabilities**:
-- ✨ **Idempotency validation** (checks if already executed)
-- ✨ **Retry strategy optimization** (learns best backoff)
-- ✨ **Graceful degradation** (partial success handling)
-
-#### 6. Verifier Agent
-**Purpose**: Business outcome validation
-
-**AI Capabilities**:
-- ✨ **Outcome prediction** (what should happen after repair)
-- ✨ **Multi-signal verification** (technical + business + user impact)
-- ✨ **False positive detection** (distinguishes coincidence from causation)
-
-#### 7. Learner Agent
-**Purpose**: Continuous improvement and knowledge extraction
-
-**AI Capabilities**:
-- ✨ **Pattern extraction** (identifies recurring failure signatures)
-- ✨ **Confidence calibration** (improves accuracy over time)
-- ✨ **Proactive recommendation** (suggests preventive actions)
-- ✨ **Knowledge graph construction** (builds integration dependency map)
+#### 4. Verify Agent (GPT-4o)
+- **Business Outcome Validation**: Checks ERP for created orders, verifies DLQ depth decreased
+- **Multi-Signal Verification**: Technical success + business outcome + no duplicate side effects
+- **Pattern Learning**: Extracts compact evidence summary → writes to AI Search + Cosmos DB for future matching
 
 ---
 
@@ -343,7 +294,6 @@ docs/
 ├── 03-User-Manual.md                   📖 Operations guide
 ├── 04-API-Reference.md                 🔌 REST API, webhooks
 ├── 05-Security-Compliance.md           🛡️ Security & compliance
-├── 07-Implementation-Roadmap.md        📝 Development plan
 ```
 
 ---

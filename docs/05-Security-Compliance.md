@@ -5,9 +5,8 @@
 
 ## Overview
 
-Continuum-Ops is built on **zero-trust security principles** with enterprise compliance certifications. This document covers:
+Continuum-Ops is built on **zero-trust security principles** following enterprise security best practices. This document covers:
 - Security architecture and controls
-- Compliance certifications (SOC 2, GDPR, HIPAA)
 - Data protection and privacy
 - Threat detection and response
 - Audit and monitoring
@@ -198,10 +197,17 @@ az storage account update \
 
 ### PII Protection
 
+> **⚠️ Critical: PII redaction MUST run BEFORE sending evidence to Azure OpenAI.**
+> The Diagnosis Agent's evidence collection pipeline is: Peek DLQ message → Redact PII → 
+> Truncate to 1K chars → Send to GPT-4o. If PII redaction runs after the LLM call,
+> sensitive data has already been transmitted to the Azure OpenAI endpoint.
+> See [01-Technical-Architecture.md — Agent Design](01-Technical-Architecture.md#our-3-agent-design)
+> for the evidence pipeline.
+
 **Automatic PII Detection & Redaction:**
 
 ```csharp
-// Analyzer Agent - PII Detection using Azure AI Language
+// Diagnosis Agent - PII Detection using Azure AI Language
 public class PiiRedactionService
 {
     private readonly TextAnalyticsClient _textAnalytics;
@@ -264,7 +270,6 @@ Evidence (Logs, Messages):
 Audit Logs:
   Retention: 7 years (immutable)
   Storage: Append-only Blob Storage
-  Compliance: SOC 2, ISO 27001
 
 RCA Documents:
   Retention: 1 year (customizable)
@@ -609,17 +614,6 @@ flowchart TB
     LESSONS[Lessons Learned<br/>Post-mortem]
     
     DETECT --> TRIAGE
-    TRIAGE -->|P0/P1| CONTAIN
-    TRIAGE -->|P2/P3| INVESTIGATE
-    CONTAIN --> INVESTIGATE
-    INVESTIGATE --> REMEDIATE
-    REMEDIATE --> RECOVER
-    RECOVER --> LESSONS
-    
-    style CONTAIN fill:#FF6B6B,stroke:#C92A2A,stroke-width:3px,color:#fff
-    style LESSONS fill:#90EE90,stroke:#006400,stroke-width:2px
-```
-
 ---
 
 ## Shared Responsibility Model
@@ -668,14 +662,6 @@ flowchart TB
 
 **Security Issues:**
 - **Mayank Gupta** - [mayank.h.gupta@capgemini.com](mailto:mayank.h.gupta@capgemini.com)
-
----
-
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2026-02-13 | Initial security & compliance documentation |
 
 ---
 

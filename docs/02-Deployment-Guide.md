@@ -15,7 +15,7 @@ This guide will take you from **zero to production** in **30 minutes** with Cont
 **What You'll Deploy:**
 - ✅ Azure Functions (Premium EP1 plan)
 - ✅ Cosmos DB (Serverless for dev, Autoscale for prod)
-- ✅ Azure OpenAI (GPT-4 Turbo)
+- ✅ Azure OpenAI (GPT-4o)
 - ✅ AI Search (Standard tier)
 - ✅ Application Insights
 - ✅ Managed Identity with cross-subscription RBAC
@@ -38,7 +38,7 @@ Click the button below to deploy all Azure resources:
 | `location` | Azure region | `eastus` | Choose region with Azure OpenAI |
 | `functionAppSku` | Functions plan SKU | `EP1` | EP1 (1 core) or EP2 (2 cores) |
 | `cosmosDbThroughput` | Cosmos DB RU/s | `autoscale` | `autoscale` or `serverless` |
-| `openAiDeploymentName` | OpenAI model deployment | `gpt-4-turbo` | Must exist in your subscription |
+| `openAiDeploymentName` | OpenAI model deployment | `gpt-4o` | Must exist in your subscription |
 | `enablePrivateEndpoints` | Use private networking | `false` | Set `true` for enterprise |
 
 **Alternative: Azure CLI Deployment**
@@ -59,7 +59,7 @@ az deployment group create \
   --template-file infrastructure/bicep/main.bicep \
   --parameters environmentName=prod \
   --parameters location=eastus \
-  --parameters openAiDeploymentName=gpt-4-turbo
+  --parameters openAiDeploymentName=gpt-4o
 ```
 
 **What Gets Deployed:**
@@ -500,7 +500,7 @@ Use this checklist to ensure complete deployment:
 **Error:**
 ```
 InvalidTemplateDeployment: The template deployment 'main' is not valid according to the validation procedure. 
-Error: Azure OpenAI deployment 'gpt-4-turbo' not found.
+Error: Azure OpenAI deployment 'gpt-4o' not found.
 ```
 
 **Solution:**
@@ -509,9 +509,9 @@ Error: Azure OpenAI deployment 'gpt-4-turbo' not found.
 az cognitiveservices account deployment create \
   --name aoai-continuumops-prod-eastus \
   --resource-group $RESOURCE_GROUP \
-  --deployment-name gpt-4-turbo \
-  --model-name gpt-4 \
-  --model-version "1106-Preview" \
+  --deployment-name gpt-4o \
+  --model-name gpt-4o \
+  --model-version "2024-08-06" \
   --model-format OpenAI \
   --sku-capacity 10 \
   --sku-name "Standard"
