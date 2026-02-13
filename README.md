@@ -4,13 +4,17 @@
 [![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com)
 [![AI Foundry](https://img.shields.io/badge/AI%20Foundry-50E6FF?style=for-the-badge&logo=microsoft&logoColor=black)](https://ai.azure.com)
 [![License](https://img.shields.io/badge/License-Internal-blue?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Prototype-orange?style=for-the-badge)](https://continuum-ops.ai)
+[![Status](https://img.shields.io/badge/Status-Prototype-orange?style=for-the-badge)]
 
 ---
 
 ## 💡 Transform Integration Ops from Reactive to Autonomous
 
-**Continuum-Ops** is the world's first **AI-native operational resilience platform** that autonomously detects, diagnoses, and heals integration failures—reducing MTTR from hours to minutes without any code changes to your existing systems.
+**Continuum-Ops** is an **AI-native operational resilience platform** that autonomously detects, diagnoses, and heals Azure Service Bus integration failures — targeting MTTR reduction from hours to minutes without code changes to your existing systems.
+
+> **⚠️ Status: Prototype / Architecture Phase.** No production code has been written yet.
+> The claims and targets in this document reflect design goals, not validated production metrics.
+> See [Roadmap](#-roadmap) for current phase.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -29,22 +33,22 @@
 ## 🌟 Why Continuum-Ops?
 
 ### For Engineering Management
-- ✅ **Significant MTTR Reduction**: From hours to minutes (validated during pilot)
-- ✅ **Ops Cost Savings**: AI does the toil work
-- ✅ **Zero Code Changes**: Works with existing integrations
+- ✅ **MTTR Reduction Target**: From hours to minutes for common failure patterns
+- ✅ **Reduced Ops Toil**: AI handles repetitive Level-1 investigation and remediation
+- ✅ **Zero Code Changes**: Works alongside existing integrations via Azure Monitor + Service Bus APIs
 - ✅ **Enterprise-Grade Security**: Zero-trust, Managed Identity, immutable audit trail
 
 ### For Operations Center
-- ✅ **No More 2AM Pages**: Autonomous healing 24/7
+- ✅ **Fewer Off-Hours Pages**: Autonomous healing for known failure patterns
 - ✅ **Focus on Innovation**: AI handles repetitive incidents
-- ✅ **Built-in Expertise**: GPT-4o knows your patterns
+- ✅ **Pattern Memory**: Learns from resolved incidents via vector search
 - ✅ **Transparent Decisions**: Full audit trail with explanations
 
 ### For Application Teams
-- ✅ **30-Minute Deployment**: Zero-touch onboarding
-- ✅ **Auto-Discovery**: Finds all integrations automatically
-- ✅ **Self-Configuring**: AI recommends optimal policies
-- ✅ **Continuous Learning**: Gets smarter with every incident
+- ✅ **Quick Onboarding**: Deploy infrastructure + configure RBAC + verify (~30 min)
+- ✅ **Auto-Discovery**: Finds Service Bus namespaces tagged for monitoring
+- ✅ **Sensible Defaults**: Configurable policies with recommended starting points
+- ✅ **Continuous Learning**: Pattern matching improves as incident history grows
 
 ---
 
@@ -111,11 +115,11 @@ graph LR
 
 ### Technology Stack
 
-| Component | Technology | Why Best-in-Class |
+| Component | Technology | Why Chosen |
 |-----------|-----------|-------------------|
-| 🤖 **Agent Runtime** | **Azure AI Agent Service** | Managed, scalable agent orchestration |
-| 👁️ **Detection** | **Azure Monitor** | Native ML-based anomaly detection |
-| 🧠 **LLM** | **GPT-4o** | Fastest reasoning model available |
+| 🤖 **Agent Runtime** | **Azure AI Agent Service** | Managed agent orchestration |
+| 👁️ **Detection** | **Azure Monitor** | Native ML-based anomaly detection, zero LLM tokens |
+| 🧠 **LLM** | **GPT-4o** | Fast reasoning, structured output, multimodal |
 | 🛠️ **Tools** | **Azure Functions** | Standard OpenAPI tool definitions |
 | 💾 **Memory** | **Azure AI Search** | Vector-based pattern recall |
 
@@ -151,7 +155,7 @@ graph LR
 Total time: 3.5 hours | Human effort: Full investigation + remediation
 ```
 
-### With Continuum-Ops
+### With Continuum-Ops (Target Scenario)
 ```
 10:45 PM - Order messages start failing in Service Bus DLQ
 10:47 PM - Azure Monitor detects anomaly (Dynamic Thresholds)
@@ -162,7 +166,7 @@ Total time: 3.5 hours | Human effort: Full investigation + remediation
 10:53 PM - Repair Agent runs "Create Customer" tool
 10:54 PM - Verify Agent confirms heal & closes incident
 
-Total time: 10 minutes | Human effort: 1-click approval
+Total time: ~10 minutes | Human effort: 1-click approval
 ```
 
 ---

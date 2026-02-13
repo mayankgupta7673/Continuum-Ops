@@ -5,7 +5,7 @@
 
 ## 🚀 Product Vision
 
-**Continuum-Ops** is a **zero-touch, AI-native operational resilience platform** that transforms integration reliability from reactive firefighting to autonomous self-healing. Built on Microsoft's cutting-edge AI Foundry and Azure AI Services, it aims to deliver enterprise-grade automation with human oversight.
+**Continuum-Ops** is an **AI-native operational resilience platform** that aims to transform integration reliability from reactive firefighting to autonomous self-healing. Built on Microsoft AI Foundry and Azure AI Services, it targets enterprise-grade automation with human oversight.
 
 ```mermaid
 mindmap
@@ -66,13 +66,13 @@ flowchart TB
     style OurPlatform fill:#50e6ff,stroke:#0078d4,stroke-width:2px
 ```
 
-### Technology Stack (Best-in-Class)
+### Technology Stack
 
-| Layer | Technology | Why Best-in-Class |
+| Layer | Technology | Why Chosen |
 |-------|-----------|-------------------|
-| **AI Orchestration** | **Azure AI Agent Service** | Fully managed service for building and deploying AI agents |
-| **Detection** | **Azure Monitor** | Native dynamic thresholds (ML) for anomaly detection |
-| **LLM** | **GPT-4o** | Multimodal reasoning with higher speed and lower cost |
+| **AI Orchestration** | **Azure AI Agent Service** | Managed agent hosting |
+| **Detection** | **Azure Monitor** | Native dynamic thresholds (ML), zero LLM tokens for monitoring |
+| **LLM** | **GPT-4o** | Fast structured output, multimodal reasoning, cost-effective |
 | **Tooling** | **OpenAPI + Azure Functions** | Standardized, interchangeable tool definitions |
 | **Memory** | **Azure AI Search** | Vector-based semantic recall for historical patterns |
 | **Runtime** | **Azure Functions (.NET 8)** | Serverless, scalable execution environment |
@@ -172,7 +172,7 @@ Every LLM call has fixed token overhead (system prompt, tool schemas, context). 
 - **Evidence Collection**: Peeks DLQ messages, queries App Insights (KQL), searches historical patterns (AI Search)
 - **Root Cause Analysis**: Identifies why messages failed with evidence citations
 - **Repair Planning**: Proposes sequenced action plan with confidence score and risk level
-- **Pattern Matching**: "I've seen this 5 times before — it's usually missing master data" (95% success rate)
+- **Pattern Matching**: "I've seen this 5 times before — it's usually missing master data" (leverages vector similarity from resolved incidents)
 
 #### 3. Repair Agent (Deterministic Code)
 - **Idempotent Execution**: Checks if action already executed before running
@@ -188,7 +188,7 @@ Every LLM call has fixed token overhead (system prompt, tool schemas, context). 
 
 ## 🌟 Unique Value Propositions
 
-### 1. Zero-Touch Onboarding
+### 1. Streamlined Onboarding
 
 ```mermaid
 sequenceDiagram
@@ -200,61 +200,69 @@ sequenceDiagram
     AZURE->>OPS: Deployment Complete
     OPS->>OPS: Auto-Discover Resources (Service Bus)
     OPS->>AZURE: Configure Monitor Alerts
-    OPS->>APP_TEAM: Ready! (Total: 15 mins)
+    OPS->>APP_TEAM: Ready! (Target: ~30 mins)
 ```
 
 **Experience**:
 1. ☑️ Deploy from Bicep.
-2. ☑️ Grant Permissions.
-3. ✅ **Live**. The system auto-configures Azure Monitor alerts for you.
+2. ☑️ Grant RBAC Permissions.
+3. ☑️ Review discovered integrations & approve policies.
+4. ✅ **Live**. The system auto-configures Azure Monitor alerts.
 
-### 2. Self-Improving AI
+### 2. Continuously Improving Pattern Matching
 
 ```mermaid
 flowchart LR
     INCIDENT[Incident Occurs]
     RESOLVE[Auto-Resolved]
     VERIFY[Outcome Verified]
-    LEARN[Pattern Learned]
-    IMPROVE[Model Fine-Tuned]
+    LEARN[Pattern Stored]
+    MATCH[Future Match<br/>via AI Search]
     FASTER[Next Incident Faster]
     
     INCIDENT --> RESOLVE
     RESOLVE --> VERIFY
     VERIFY --> LEARN
-    LEARN --> IMPROVE
-    IMPROVE --> FASTER
+    LEARN --> MATCH
+    MATCH --> FASTER
     FASTER -.->|Continuous loop| INCIDENT
     
-    style IMPROVE fill:#90EE90,stroke:#006400,stroke-width:3px
+    style LEARN fill:#90EE90,stroke:#006400,stroke-width:3px
 ```
 
-**How It Works**:
-- 📈 **Week 1**: 40% auto-resolution rate (learning mode)
-- 📈 **Week 4**: 65% auto-resolution rate (pattern recognition)
-- 📈 **Week 12**: 80%+ auto-resolution rate (mature system)
-- 📈 **Week 24**: 90%+ with proactive prevention
+**Expected Progression** (depends heavily on failure pattern diversity):
+- 📈 **Week 1-2**: ~30-40% auto-resolution (learning mode, most actions need approval)
+- 📈 **Month 1-2**: ~50-65% auto-resolution (common patterns recognized)
+- 📈 **Month 3-6**: ~60-75% auto-resolution (mature pattern library)
+
+> **Reality check**: These projections assume the majority of failures fall into a small
+> number of recurring patterns (e.g., missing master data, transient timeouts, poison
+> messages). Environments with highly diverse failure modes will see lower auto-resolution
+> rates. The system always falls back to human escalation for novel failures.
 
 ---
 
 ## 📊 Success Metrics & SLAs
 
-### Platform SLAs (Target)
+### Platform SLAs (Design Targets)
 
-| Metric | Target | Measurement |
-|--------|-----|-------------|
-| **Platform Uptime** | 99.99% | <4.38 min downtime/month |
-| **Detection Latency** | <5 min | 95th percentile |
-| **Diagnosis Latency** | <30 sec | 95th percentile |
-| **Auto-Resolution Rate** | 60-80% | After 30-day maturity period |
-| **False Positive Rate** | <5% | Verified incidents / total triggers |
-| **Diagnosis Accuracy** | >90% | Validated against manual RCA |
+> These are **aspirational design targets**, not contractual SLAs. Actual numbers will
+> be baselined during the pilot phase (Q3 2026).
+
+| Metric | Design Target | Stretch Goal | Measurement |
+|--------|--------------|--------------|-------------|
+| **Platform Uptime** | 99.9% | 99.95% | Monthly (limited by Azure Functions Premium SLA of 99.95%) |
+| **Detection Latency** | <5 min | <2 min | 95th percentile |
+| **Diagnosis Latency** | <30 sec | <15 sec | 95th percentile |
+| **Auto-Resolution Rate** | 50-65% | 75% | After 30-day maturity period (pattern-dependent) |
+| **False Positive Rate** | <10% | <5% | Verified incidents / total triggers |
+| **Diagnosis Accuracy** | >85% | >90% | Validated against manual RCA |
 
 ### Internal Success Metrics
 
 ```mermaid
 gantt
-    title Success Journey (First 6 Months)
+    title Success Journey — Targets (First 6 Months)
     dateFormat YYYY-MM-DD
     section MTTR Reduction
     Current MTTR (2-8 hrs)    :done, baseline, 2026-01-01, 30d
@@ -263,9 +271,9 @@ gantt
     Month 6 (15 min avg)      :m6, 2026-05-30, 30d
     
     section Auto-Resolution %
-    Month 1 (40%)             :active, a1, 2026-01-31, 30d
-    Month 3 (65%)             :a3, 2026-03-31, 60d
-    Month 6 (80%)             :a6, 2026-05-30, 30d
+    Month 1 (30-40%)          :active, a1, 2026-01-31, 30d
+    Month 3 (50-65%)          :a3, 2026-03-31, 60d
+    Month 6 (60-75%)          :a6, 2026-05-30, 30d
 ```
 
 ---

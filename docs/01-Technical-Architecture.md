@@ -732,19 +732,23 @@ The platform is designed to be deployed directly into the project's Azure subscr
 
 ### Scaling Dimensions
 
-| Component | Scaling Strategy | Target Capacity |
-|-----------|------------------|-----------------|
-| **AI Agents** | Azure Functions auto-scale (EP2 plan) | 100+ concurrent incidents |
-| **Durable Functions** | Partition count = 16 | 1000+ orchestrations/min |
-| **Cosmos DB** | Autoscale 4000-40000 RU/s | 10K writes/sec |
-| **AI Search** | Standard tier, 3 replicas | 50 queries/sec |
-| **Azure OpenAI** | 100K TPM quota | 500 diagnoses/hour |
+> **Note**: These are theoretical capacity targets based on Azure service limits, not
+> validated benchmarks. Actual throughput will be baselined during the pilot phase.
+> Concurrent incident capacity is primarily constrained by Azure OpenAI TPM (tokens per minute) quota.
 
-**Performance Targets**:
-- Detection latency: <2 min (P95)
+| Component | Scaling Strategy | Target Capacity | Constraint |
+|-----------|------------------|-----------------|------------|
+| **AI Agents** | Azure Functions auto-scale (EP2 plan) | 20-50 concurrent incidents | Limited by Azure OpenAI TPM quota, not compute |
+| **Durable Functions** | Partition count = 16 | 1000+ orchestrations/min | Well-proven at this scale |
+| **Cosmos DB** | Autoscale 4000-40000 RU/s | 10K writes/sec | Standard autoscale behavior |
+| **AI Search** | Standard tier, 3 replicas | 50 queries/sec | Adequate for expected volume |
+| **Azure OpenAI** | 100K TPM quota (default) | ~150 diagnoses/hour | Requires quota increase for higher volume; consider PTU for >200/day |
+
+**Performance Targets** (design goals — to be validated during pilot):
+- Detection latency: <5 min (P95)
 - Diagnosis latency: <30 sec (P95)
 - Repair latency: <60 sec (P95)
-- End-to-end MTTR: <10 min (P95)
+- End-to-end MTTR: <15 min (P95) for known patterns
 
 ---
 
