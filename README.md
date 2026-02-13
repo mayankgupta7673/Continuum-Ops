@@ -3,8 +3,8 @@
 
 [![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com)
 [![AI Foundry](https://img.shields.io/badge/AI%20Foundry-50E6FF?style=for-the-badge&logo=microsoft&logoColor=black)](https://ai.azure.com)
-[![License](https://img.shields.io/badge/License-Internal-blue?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Prototype-orange?style=for-the-badge)]
+[![License](https://img.shields.io/badge/License-Internal-blue?style=for-the-badge)]()
+[![Status](https://img.shields.io/badge/Status-Prototype-orange?style=for-the-badge)]()
 
 ---
 
