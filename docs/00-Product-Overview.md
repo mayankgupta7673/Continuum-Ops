@@ -305,13 +305,3 @@ docs/
 ```
 
 ---
-
-## 📞 Contact
-
-- **Mayank Gupta** - [mayank.h.gupta@capgemini.com](mailto:mayank.h.gupta@capgemini.com)
-
----
-
-**© 2026 Continuum-Ops**
-
-*Built with ❤️ on Microsoft Azure*

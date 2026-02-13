@@ -173,20 +173,19 @@ Total time: ~10 minutes | Human effort: 1-click approval
 
 ## 🚀 Roadmap
 
-### ✅ Phase 1: Prototype (Current)
+### ✅ Phase 1: Prototype
 - Concept validation
 - Architecture design
 - Internal pitch
 
-### 🔄 Phase 2: MVP Development (Q2 2026)
+### 🔄 Phase 2: MVP Development
 - Multi-agent AI core
 - Azure Monitor integration
 - Service Bus auto-heal
 
-### 🔮 Phase 3: Pilot (Q3 2026)
+### 🔮 Phase 3: Pilot
 - Deploy to non-prod environment
 - Validation with real data
-- Tuning AI models
 
 ---
 
