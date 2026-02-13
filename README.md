@@ -219,6 +219,6 @@ Internal Proprietary Software.
 
 ---
 
-*Built with ❤️ on Microsoft Azure*
+*Built on/for/with Microsoft Azure*
 
 </div>
