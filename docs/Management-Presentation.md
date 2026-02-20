@@ -191,6 +191,7 @@ flowchart TD
 | **Circuit breaker** | 5 consecutive failures → all auto-repair stops, human takes over |
 | **Immutable audit trail** | Every action logged — who, what, when, why, which system |
 | **Cross-system verification** | Checks health across all affected systems, not just the one that was fixed |
+| **PII redaction** | Sensitive data automatically redacted before AI processing |
 
 > **Week 1-2**: Everything requires approval (learning mode).
 > We gradually loosen the guardrails only after we build trust in the system.
@@ -285,7 +286,41 @@ graph TB
 
 ---
 
-<!-- SLIDE 10: MVP SCOPE — START SMALL, THINK BIG -->
+<!-- SLIDE 10: TECHNOLOGY STACK -->
+
+## 🛠️ Technology Stack — Built on Azure AI
+
+**Lean, cost-optimized, enterprise-grade.**
+
+| Layer | Technology | Why Chosen |
+|-------|-----------|------------|
+| **AI Orchestration** | Azure AI Agent Service + Semantic Kernel | Managed agent hosting with native Azure integration |
+| **Detection** | Azure Monitor (Dynamic Thresholds) | ML-based anomaly detection, zero LLM tokens, zero code |
+| **LLM** | Azure OpenAI GPT-4o | Fast structured output, cost-effective (~$0.01/incident) |
+| **Orchestration** | Azure Durable Functions (.NET 8) | Stateful workflows, deterministic routing, $0 LLM cost |
+| **Tooling** | OpenAPI + Azure Functions | Standardized, interchangeable, pluggable tool definitions |
+| **Memory** | Azure AI Search (vectors) + Cosmos DB (metadata) | Semantic pattern recall + structured incident storage |
+| **Identity** | Microsoft Entra ID + Managed Identity | Zero-trust, passwordless, no secrets to manage |
+| **Approval UI** | Microsoft Teams Adaptive Cards | Where engineers already work — one-click approve/reject |
+| **Infrastructure** | Bicep (IaC) | One-click deployment, repeatable, auditable |
+
+### Why Only 3 AI Agents?
+
+Every LLM call has fixed token overhead. Our lean 3-agent design cuts token cost by **~70%** vs. a typical multi-agent approach:
+
+| Component | Role | LLM Cost |
+|-----------|------|----------|
+| **Azure Monitor** | Detection — ML-based anomaly detection | **$0** (no LLM) |
+| **Durable Functions** | Routing, state, policy gates, approvals | **$0** (deterministic code) |
+| **Diagnosis Agent** | Evidence + Root Cause Analysis + repair plan | **~$0.007** (1 GPT-4o call) |
+| **Repair Agent** | Execute OpenAPI tools | **$0** (deterministic code) |
+| **Verify Agent** | Validate outcome + update patterns | **~$0.003** (1 GPT-4o call) |
+
+> **Total cost per incident: ~$0.01** — whether it's Azure, SAP, or AWS.
+
+---
+
+<!-- SLIDE 11: MVP SCOPE — START SMALL, THINK BIG -->
 
 ## 🎯 MVP Scope — Start Azure, Extend Hybrid
 
@@ -294,11 +329,17 @@ graph TB
 | Capability | Details |
 |-----------|---------|
 | **Platform core** | Signal ingestion → diagnosis → approval → repair → verify loop |
-| **Signal ingestion layer** | Azure Monitor + generic webhook endpoint (ready for non-Azure signals) |
+| **Signal ingestion layer** | Azure Monitor + Event Grid + generic webhook endpoint (ready for non-Azure signals) |
 | **First workload** | Azure Service Bus DLQ (detect, diagnose, replay, verify) |
+| **AI Agents** | Diagnosis Agent (GPT-4o) + Repair Agent (deterministic) + Verify Agent (GPT-4o) |
 | **Tool registry** | OpenAPI-based plug-in system (same interface for any system) |
+| **Pattern memory** | AI Search (vector similarity) + Cosmos DB (metadata) — system learns from every incident |
 | **Approve** via Teams | Adaptive Card with Approve / Reject buttons |
-| **Audit** everything | Immutable log in Cosmos DB |
+| **Auto-discovery** | Scans Azure subscriptions for Service Bus namespaces tagged `AutoHeal=Enabled` |
+| **Policy engine** | Per-integration confidence thresholds, allowed actions, rate limits, circuit breakers |
+| **Audit** everything | Immutable log in Cosmos DB with tamper-detection signatures |
+| **PII redaction** | Automatic PII detection and redaction before AI processing |
+| **Deployment** | One-click Bicep deployment (~30 min from zero to live) |
 
 ### 🔮 Phase 2 — Extend to Hybrid
 
@@ -308,6 +349,7 @@ graph TB
 | **Cross-cloud adapter** | AWS SQS DLQ via CloudWatch webhook |
 | **SaaS adapter** | Salesforce sync failure via platform events |
 | **Pattern sharing** | Patterns learned from Azure incidents help diagnose similar on-prem failures |
+| **Additional Azure workloads** | API Management, Data Factory, AKS |
 
 ### ❌ Not In MVP
 
@@ -317,6 +359,7 @@ graph TB
 | AWS / GCP native monitoring integration | Webhooks are sufficient; native integration is optimization |
 | Self-service portal for teams | API registration is fine initially |
 | Auto-discovery across environments | Manual registration for pilot |
+| SDKs (.NET, TypeScript, Python) | REST API is sufficient; SDKs are a post-MVP polish |
 
 > **Philosophy**: Build the platform engine once on Azure, prove it with one Azure workload,
 > then extend to on-prem and other clouds. The **webhook ingestion + OpenAPI tool registry**
@@ -324,7 +367,7 @@ graph TB
 
 ---
 
-<!-- SLIDE 11: WHY HYBRID MATTERS -->
+<!-- SLIDE 12: WHY HYBRID MATTERS -->
 
 ## 💡 Why Hybrid Matters
 
@@ -356,23 +399,58 @@ Most enterprise incidents don't live in one system:
 
 ---
 
-<!-- SLIDE 14: RISKS -->
+<!-- SLIDE 13: SUCCESS METRICS & LEARNING CURVE -->
+
+## 📈 Success Metrics & Expected Progression
+
+### Platform SLA Targets
+
+| Metric | Design Target | Stretch Goal |
+|--------|--------------|--------------|
+| **Platform Uptime** | 99.9% | 99.95% |
+| **Detection Latency** | <5 min | <2 min |
+| **Diagnosis Latency** | <30 sec | <15 sec |
+| **Auto-Resolution Rate** | 50-65% | 75% |
+| **False Positive Rate** | <10% | <5% |
+| **Diagnosis Accuracy** | >85% | >90% |
+
+### The System Gets Smarter Over Time
+
+```
+  📈 Auto-Resolution Rate Progression
+  
+  Week 1-2     ████████░░░░░░░░░░░░  30-40%  (learning mode, most need approval)
+  Month 1-2    █████████████░░░░░░░  50-65%  (common patterns recognized)
+  Month 3-6    ███████████████░░░░░  60-75%  (mature pattern library)
+```
+
+Every resolved incident writes a **compact evidence summary** to the pattern memory (AI Search vectors). When a similar incident occurs, the system matches it in milliseconds — no LLM call needed for known patterns (~$0.001 vs $0.01).
+
+> **Reality check**: These projections assume the majority of failures fall into a small
+> number of recurring patterns. Environments with highly diverse failure modes will see
+> lower auto-resolution rates. The system always falls back to human escalation for novel failures.
+
+---
+
+<!-- SLIDE 14: RISKS & MITIGATIONS -->
 
 ## ⚠️ Risks & Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
 | **AI gives wrong diagnosis** | Medium | Medium | Confidence threshold + mandatory approval + circuit breaker |
-| **Azure OpenAI outage** | Low | Medium | Graceful degradation: detection + escalation continues without AI |
+| **Azure OpenAI outage** | Low | Medium | Graceful degradation: detection + escalation continues without AI; pattern-match-only mode |
 | **Low auto-resolution rate** | Medium | Low | Diagnosis alone saves 30-60 min even without auto-fix |
 | **On-prem connectivity issues** | Medium | Medium | Azure Arc + Hybrid Workers are proven tech; start with Azure-only, add on-prem after trust is built |
 | **Cross-system repair complexity** | Medium | High | Start with single-system repairs (replay message). Cross-system orchestration is Phase 3+ |
 | **Team resistance** | Medium | Medium | Learning mode first. Show evidence. Build trust over 2-4 weeks |
 | **Scope creep** (too many systems too fast) | High | High | Strict phasing: Azure first → validate → on-prem → validate → expand |
+| **LLM cost runaway** | Low | Medium | Daily token budget cap (200K tokens), auto-switches to pattern-match-only mode when exhausted |
+| **PII/data leakage to LLM** | Low | High | Automatic PII redaction BEFORE AI processing; Azure OpenAI data stays in your tenant |
 
 ---
 
-<!-- SLIDE 17: CLOSING -->
+<!-- SLIDE 15: CLOSING -->
 
 ## 🚀 One Last Thing
 
@@ -380,7 +458,7 @@ This is what the engineer sees at 2 AM — **regardless of which system failed**
 
 ```
 ╔══════════════════════════════════════════════════╗
-║          Continuum-Ops — Action Required          ║
+║          Continuum-Ops — Action Required         ║
 ╠══════════════════════════════════════════════════╣
 ║                                                  ║
 ║  Workload: order-to-cash (Production)            ║
