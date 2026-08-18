@@ -134,6 +134,8 @@ graph LR
 
 ### 🏗️ Technical Deep-Dive
 - **[Technical Architecture](docs/01-Technical-Architecture.md)** - System design, AI agents, data models
+- **[AI Agent Implementation Guide](docs/06-AI-Agent-Implementation.md)** - Step-by-step Azure AI Foundry Agents development
+- **[Ticketing Integration Strategy](docs/07-Ticketing-Integration-Strategy.md)** - ADO, JIRA, ServiceNow integration guide
 - **[API Reference](docs/04-API-Reference.md)** - REST APIs, webhooks
 
 ### 🛡️ Enterprise & Compliance
