@@ -1,88 +1,95 @@
 # Continuum-Ops: AI Agent Implementation Guide
-## Building Enterprise-Grade AI Agents with Azure AI Foundry & Semantic Kernel
+## Building Enterprise-Grade AI Agents with Microsoft Foundry Agent Service
 
 ---
 
 ## Overview
 
-This comprehensive guide provides **end-to-end implementation instructions** for building the **3 specialized AI agents** in Continuum-Ops using the latest Azure AI technologies (2026). You'll learn how to leverage **Azure AI Foundry**, **Semantic Kernel 1.x**, **Azure OpenAI GPT-4o**, and **.NET 8** to create production-ready AI agents.
+This guide provides **end-to-end implementation instructions** for building the **3 specialized AI agents** in Continuum-Ops using **Microsoft Foundry Agent Service**. It reflects the current (2026) recommended architecture: **Prompt Agents** for AI reasoning, a **custom MCP tool server** for evidence/action tools, and **Durable Functions** for deterministic orchestration.
+
+> **Looking for the older Assistants API implementation?** It's kept for reference in [docs/legacy/06-AI-Agent-Implementation-AssistantsAPI-Legacy.md](legacy/06-AI-Agent-Implementation-AssistantsAPI-Legacy.md). It is **not** the recommended starting point — see [08-AIOps-Solution-Architecture-Review.md](08-AIOps-Solution-Architecture-Review.md) for why.
 
 **Agent Architecture Reference:**
-- **Diagnosis Agent**: Evidence collection + Root Cause Analysis + repair planning (1 GPT-4o call, ~2,600 tokens)
-- **Repair Agent**: Deterministic tool execution with OpenAPI-based plugins (0 LLM calls, pure .NET logic)
-- **Verify Agent**: Outcome validation + pattern learning (1 GPT-4o call, ~700 tokens)
+- **Diagnosis Agent**: Foundry **Prompt Agent** — evidence collection + root cause analysis + repair planning (1 GPT-4o call, ~2,600 tokens)
+- **Repair Agent**: Deterministic .NET Azure Function (0 LLM calls) — executes policy-driven repair actions
+- **Verify Agent**: Foundry **Prompt Agent** — outcome validation + pattern learning (1 GPT-4o call, ~700 tokens)
 
 **What You'll Learn:**
-- ✅ Setting up Azure AI Foundry workspace and managed agents
-- ✅ Implementing agents using Semantic Kernel with best practices
-- ✅ Building OpenAPI-based tool plugins for Azure Functions
-- ✅ Orchestrating multi-agent workflows with Durable Functions
-- ✅ Deploying, monitoring, and optimizing agent performance
+- ✅ Setting up a Microsoft Foundry project and Azure OpenAI GPT-4o deployment
+- ✅ Building a custom **MCP tool server** on Azure Functions and registering it in Foundry's **Toolbox**
+- ✅ Authoring Diagnosis Agent and Verify Agent as **Prompt Agents** (portal + code-first)
+- ✅ Orchestrating multi-agent workflows with Durable Functions calling the Foundry **Responses API**
+- ✅ Tracing, evaluating, and optimizing agents with Foundry's built-in lifecycle tools
 - ✅ Cost optimization strategies (target: <$0.01 per incident)
 
 ---
 
 ## Table of Contents
 
-1. [Implementation Approaches](#implementation-approaches-2026-best-practices)
+1. [Implementation Approach](#implementation-approach)
 2. [Prerequisites & Setup](#prerequisites)
 3. [Step-by-Step Implementation](#step-by-step-implementation-guide)
-4. [Agent 1: Diagnosis Agent](#agent-1-diagnosis-agent-implementation)
-5. [Agent 2: Repair Agent](#agent-2-repair-agent-implementation)
-6. [Agent 3: Verify Agent](#agent-3-verify-agent-implementation)
-7. [Orchestration Layer](#orchestration-layer-durable-functions)
-8. [Deployment & Testing](#deployment--testing)
-9. [Monitoring & Optimization](#monitoring--optimization)
-10. [Best Practices & Patterns](#best-practices--agent-design-patterns)
+4. [Building the MCP Tool Server](#building-the-mcp-tool-server)
+5. [Diagnosis Agent (Prompt Agent)](#diagnosis-agent-prompt-agent)
+6. [Verify Agent (Prompt Agent)](#verify-agent-prompt-agent)
+7. [Repair Agent (Deterministic Function)](#repair-agent-deterministic-function)
+8. [Orchestration Layer](#orchestration-layer-durable-functions)
+9. [Deployment & Testing](#deployment--testing)
+10. [Tracing, Evaluation & Optimization](#tracing-evaluation--optimization)
+11. [Best Practices](#best-practices)
+12. [Cost Optimization Strategies](#cost-optimization-strategies)
+13. [References](#references)
 
 ---
 
-## Implementation Approaches (2026 Best Practices)
+## Implementation Approach
 
-### Option 1: Azure AI Foundry Managed Agents (Recommended for AI-Heavy Workloads)
-- **Language**: Python or .NET
-- **Hosting**: Fully managed by Azure AI Foundry
-- **Best for**: Diagnosis and Verify agents (AI reasoning)
-- **Benefits**: Managed hosting, built-in conversation memory, automatic scaling
+| Component | Technology | Why |
+|---|---|---|
+| **Diagnosis Agent** | Microsoft Foundry Agent Service — **Prompt Agent** | Reasons over evidence and calls tools; no custom orchestration logic needed. Foundry manages the tool-calling loop, session state, and identity. Language-agnostic — configured via Foundry portal/SDK/REST. |
+| **Verify Agent** | Microsoft Foundry Agent Service — **Prompt Agent** | Same rationale — a narrow, tool-calling reasoning task. Language-agnostic. |
+| **Repair Agent** | **.NET 8** Azure Function, deterministic | Never an LLM decision — auditable, policy-driven, dry-run capable. .NET chosen for Durable Functions maturity and typed enterprise/ERP integration. |
+| **Tools** (`peek_dlq_messages`, `query_application_logs`, `search_similar_patterns`, `replay_messages`, `check_dlq_depth`, `query_erp`, `upsert_pattern`) | **Python** MCP server on Azure Functions, registered in Foundry **Toolbox** | Python has first-class support for the `mcp_tool_trigger` binding, is faster to iterate on than the .NET MCP attribute model, and matches the broader Python-first MCP tooling ecosystem. Centrally governed, versioned tool set shared by both Prompt Agents instead of duplicated OpenAPI definitions per agent. |
+| **Orchestration** | **.NET 8** Durable Functions | Owns retries, branching, and compensation outside the agents — agents stay narrow and stateless per call. |
 
-### Option 2: Custom Azure Functions Implementation (Recommended for Enterprise Integration)
-- **Language**: .NET 8 with Semantic Kernel
-- **Hosting**: Azure Functions Premium
-- **Best for**: Repair agent and orchestration (business logic)
-- **Benefits**: Full control, enterprise libraries, deterministic execution
+> **Why polyglot?** The MCP tool server and the orchestrator/Repair Agent are independently deployed Function Apps with no shared code, so there's no interop cost to using different languages for each — pick the best fit per component. See [08-AIOps-Solution-Architecture-Review.md](08-AIOps-Solution-Architecture-Review.md) for the full comparison.
 
-### Hybrid Approach (Recommended for Continuum-Ops)
 ```mermaid
 graph TB
-    subgraph AzureAIFoundry[Azure AI Foundry - Managed Agents]
-        DIAG_AGENT[Diagnosis Agent<br/>Python/Promptflow]
-        VERIFY_AGENT[Verify Agent<br/>Python/Promptflow]
+    subgraph Foundry[Microsoft Foundry Agent Service]
+        DIAG_AGENT[Diagnosis Agent<br/>Prompt Agent]
+        VERIFY_AGENT[Verify Agent<br/>Prompt Agent]
+        TOOLBOX[Toolbox<br/>MCP-compatible endpoint]
     end
-    
-    subgraph AzureFunctions[Azure Functions - .NET 8]
-        ORCHESTRATOR[Durable Functions Orchestrator]
-        REPAIR_AGENT[Repair Agent]
-        TOOLS[Enterprise Tool Registry]
-        POLICY_ENGINE[Policy Engine]
+
+    subgraph AzureFunctions[Azure Functions]
+        ORCHESTRATOR[Durable Functions Orchestrator<br/>.NET 8]
+        REPAIR_AGENT[Repair Agent<br/>.NET 8, deterministic]
+        MCP_SERVER[MCP Tool Server<br/>Python · /runtime/webhooks/mcp]
     end
-    
-    subgraph AzureServices[Azure AI Services]
+
+    subgraph AzureServices[Azure Services]
         OPENAI[Azure OpenAI GPT-4o]
-        SEARCH[AI Search w/ Vector]
+        SEARCH[AI Search - vector]
         COSMOS[Cosmos DB]
         SERVICEBUS[Service Bus]
-        APIM[API Management]
     end
-    
-    ORCHESTRATOR -->|REST API via APIM| DIAG_AGENT
+
+    ORCHESTRATOR -->|Responses API| DIAG_AGENT
     ORCHESTRATOR --> REPAIR_AGENT
-    ORCHESTRATOR -->|REST API via APIM| VERIFY_AGENT
-    
+    ORCHESTRATOR -->|Responses API| VERIFY_AGENT
+
+    DIAG_AGENT --> TOOLBOX
+    VERIFY_AGENT --> TOOLBOX
+    TOOLBOX --> MCP_SERVER
+    MCP_SERVER --> SEARCH
+    MCP_SERVER --> COSMOS
+    MCP_SERVER --> SERVICEBUS
+
     DIAG_AGENT --> OPENAI
     VERIFY_AGENT --> OPENAI
-    REPAIR_AGENT --> TOOLS
-    
-    style AzureAIFoundry fill:#50e6ff,stroke:#0078d4,stroke-width:3px
+
+    style Foundry fill:#50e6ff,stroke:#0078d4,stroke-width:3px
     style AzureFunctions fill:#90EE90,stroke:#006400,stroke-width:2px
 ```
 
@@ -91,493 +98,270 @@ graph TB
 ## Prerequisites
 
 ### Azure Resources Required
-- **Azure AI Foundry workspace** (for managed agents)
-- **Azure OpenAI service** with GPT-4o deployment
-- **Azure Functions Premium plan** (EP1/EP2)
-- **Azure AI Search service** (Standard tier with vector support)
-- **Azure Cosmos DB account** (with vector extensions)
-- **Azure API Management** (for agent communication)
-- **Azure Service Bus namespace** (for testing)
-- **Azure Application Insights** (for monitoring)
+- **Microsoft Foundry project** (hosts Prompt Agents, Toolbox, tracing/evaluation)
+- **Azure OpenAI** with a GPT-4o deployment (used by the Foundry model catalog)
+- **Azure Functions Premium plan** (EP1/EP2) — hosts the MCP tool server, Repair Agent, and Durable Functions orchestrator
+- **Azure AI Search** (Standard tier, vector support) — pattern memory
+- **Azure Cosmos DB** (Core SQL API) — incidents, patterns, audit
+- **Azure Service Bus namespace** — the system being monitored/healed
+- **Application Insights** — observability (in addition to Foundry's native agent tracing)
 
 ### Development Environment
-```bash
-# .NET 8 SDK
-dotnet --version  # Should be 8.0.x or later
 
-# Azure CLI with AI extensions
-az version
-az extension add --name ml
-az extension add --name ai
+```powershell
+# .NET 8 SDK (orchestrator + Repair Agent)
+dotnet --version   # 8.0.x or later
 
-# Python (for AI Foundry agents)
-python --version  # Should be 3.11+ for best AI Foundry support
+# Python 3.11+ (MCP tool server)
+python --version
 
-# Required NuGet packages (.NET)
-dotnet add package Microsoft.SemanticKernel --version 1.5.0
-dotnet add package Microsoft.SemanticKernel.Plugins.OpenApi --version 1.5.0
-dotnet add package Azure.AI.OpenAI --version 1.0.0
-dotnet add package Azure.Search.Documents --version 11.6.0
-dotnet add package Microsoft.Azure.Cosmos --version 3.39.0
-dotnet add package Azure.Messaging.ServiceBus --version 7.18.0
-dotnet add package Microsoft.Azure.Functions.Worker --version 1.21.0
-dotnet add package Microsoft.Azure.Functions.Worker.Extensions.DurableTask --version 1.1.0
-dotnet add package Microsoft.Extensions.Azure --version 1.7.0
+# Azure CLI
+az --version
+az extension add --name ml     # Foundry project management (hub/project resources)
 
-# Required Python packages (for AI Foundry)
-pip install azure-ai-ml>=1.13.0
-pip install azure-ai-inference>=1.0.0
-pip install promptflow[azure]>=1.9.0
-pip install semantic-kernel>=1.0.0
+# Azure Functions Core Tools (4.0.7030+ required for MCP extension)
+func --version
+
+# Python packages for the MCP tool server (Azure Function, Python v2 model)
+pip install azure-functions>=1.24.0
+pip install azure-cosmos azure-search-documents azure-servicebus azure-identity
+
+# NuGet packages for the orchestrator / Repair Agent (.NET Azure Function)
+dotnet add package Microsoft.Azure.Functions.Worker.Extensions.DurableTask
+dotnet add package Azure.Identity
 ```
 
 ---
 
 ## Step-by-Step Implementation Guide
 
-### Phase 1: Azure AI Foundry Setup (30 minutes)
+### Phase 1: Foundry Project Setup
 
-#### 1.1 Create Azure AI Foundry Workspace
-
-```bash
-# Login to Azure
+```powershell
 az login
-
-# Set your subscription
 az account set --subscription "<your-subscription-id>"
 
-# Create resource group
 az group create --name rg-continuumops-prod --location eastus
 
-# Create Azure AI Foundry workspace (formerly Azure AI Studio)
-az ml workspace create \
-  --name aifoundry-continuumops \
-  --resource-group rg-continuumops-prod \
-  --location eastus \
-  --display-name "Continuum-Ops AI Foundry" \
-  --description "AI agent workspace for enterprise AutoHeal"
-```
-
-#### 1.2 Deploy Azure OpenAI GPT-4o
-
-```bash
-# Create Azure OpenAI resource
-az cognitiveservices account create \
-  --name openai-continuumops \
-  --resource-group rg-continuumops-prod \
-  --kind OpenAI \
-  --sku S0 \
+# Foundry hub + project (agent hosting, tracing, evaluation, Toolbox)
+az ml workspace create `
+  --kind hub `
+  --name foundry-hub-continuumops `
+  --resource-group rg-continuumops-prod `
   --location eastus
 
-# Deploy GPT-4o model
-az cognitiveservices account deployment create \
-  --name openai-continuumops \
-  --resource-group rg-continuumops-prod \
-  --deployment-name gpt-4o \
-  --model-name gpt-4o \
-  --model-version "2024-08-06" \
-  --model-format OpenAI \
-  --sku-capacity 50 \
-  --sku-name "Standard"
+az ml workspace create `
+  --kind project `
+  --name foundry-continuumops `
+  --hub-id foundry-hub-continuumops `
+  --resource-group rg-continuumops-prod `
+  --location eastus
 ```
 
-#### 1.3 Configure Azure AI Search for Vector Memory
+### Phase 2: Deploy Azure OpenAI GPT-4o
 
-```bash
-# Create Azure AI Search service
-az search service create \
-  --name search-continuumops \
-  --resource-group rg-continuumops-prod \
-  --sku Standard \
-  --partition-count 1 \
-  --replica-count 2
+```powershell
+az cognitiveservices account create `
+  --name openai-continuumops `
+  --resource-group rg-continuumops-prod `
+  --kind OpenAI --sku S0 --location eastus
 
-# Enable semantic ranker (for better retrieval)
-az search service update \
-  --name search-continuumops \
-  --resource-group rg-continuumops-prod \
-  --semantic-search free
+az cognitiveservices account deployment create `
+  --name openai-continuumops `
+  --resource-group rg-continuumops-prod `
+  --deployment-name gpt-4o `
+  --model-name gpt-4o --model-version "2024-08-06" `
+  --model-format OpenAI --sku-capacity 50 --sku-name "Standard"
 ```
 
-#### 1.4 Create Cosmos DB for State & Audit
+### Phase 3: Azure AI Search + Cosmos DB
 
-```bash
-# Create Cosmos DB account with vector extensions
-az cosmosdb create \
-  --name cosmos-continuumops \
-  --resource-group rg-continuumops-prod \
-  --locations regionName=eastus failoverPriority=0 \
+```powershell
+az search service create `
+  --name search-continuumops --resource-group rg-continuumops-prod `
+  --sku Standard --partition-count 1 --replica-count 2
+
+az cosmosdb create `
+  --name cosmos-continuumops --resource-group rg-continuumops-prod `
+  --locations regionName=eastus failoverPriority=0 `
   --capabilities EnableServerless EnableNoSQLVectorSearch
 
-# Create databases and containers
-az cosmosdb sql database create \
-  --account-name cosmos-continuumops \
-  --resource-group rg-continuumops-prod \
-  --name ContinuumOps
+az cosmosdb sql database create `
+  --account-name cosmos-continuumops --resource-group rg-continuumops-prod --name ContinuumOps
 
-# Incidents container
-az cosmosdb sql container create \
-  --account-name cosmos-continuumops \
-  --database-name ContinuumOps \
-  --name Incidents \
-  --partition-key-path "/incidentId" \
-  --throughput 4000
+az cosmosdb sql container create `
+  --account-name cosmos-continuumops --database-name ContinuumOps `
+  --name Incidents --partition-key-path "/tenantId" --throughput 4000
 
-# Patterns container with vector indexing
-az cosmosdb sql container create \
-  --account-name cosmos-continuumops \
-  --database-name ContinuumOps \
-  --name Patterns \
-  --partition-key-path "/signatureHash" \
-  --throughput 1000
-
-# Audit container
-az cosmosdb sql container create \
-  --account-name cosmos-continuumops \
-  --database-name ContinuumOps \
-  --name AuditEvents \
-  --partition-key-path "/incidentId" \
-  --throughput 1000
+az cosmosdb sql container create `
+  --account-name cosmos-continuumops --database-name ContinuumOps `
+  --name Patterns --partition-key-path "/tenantId" --throughput 1000
 ```
 
-### Phase 2: Development Environment Setup (15 minutes)
-
-#### 2.1 Initialize .NET 8 Solution
-
-```bash
-# Create solution structure
-mkdir src
-cd src
-
-# Create main projects
-dotnet new sln -n ContinuumOps
-
-# Create Azure Functions project for agents and orchestration
-dotnet new func -n Continuum.Ops.Functions --worker-runtime dotnet-isolated --target-framework net8.0
-dotnet sln add Continuum.Ops.Functions
-
-# Create shared library
-dotnet new classlib -n Continuum.Ops.Shared --framework net8.0
-dotnet sln add Continuum.Ops.Shared
-
-# Add project references
-cd Continuum.Ops.Functions
-dotnet add reference ../Continuum.Ops.Shared
-```
-
-#### 2.2 Install Core NuGet Packages
-
-```bash
-# Navigate to Functions project
-cd Continuum.Ops.Functions
-
-# Azure Functions & Durable Functions
-dotnet add package Microsoft.Azure.Functions.Worker --version 1.21.0
-dotnet add package Microsoft.Azure.Functions.Worker.Extensions.DurableTask --version 1.1.0
-dotnet add package Microsoft.Azure.Functions.Worker.Extensions.Http --version 3.1.0
-
-# Semantic Kernel for AI orchestration
-dotnet add package Microsoft.SemanticKernel --version 1.5.0
-dotnet add package Microsoft.SemanticKernel.Plugins.OpenApi --version 1.5.0
-dotnet add package Microsoft.SemanticKernel.Connectors.AzureOpenAI --version 1.5.0
-
-# Azure SDKs
-dotnet add package Azure.AI.OpenAI --version 1.0.0
-dotnet add package Azure.Search.Documents --version 11.6.0
-dotnet add package Microsoft.Azure.Cosmos --version 3.39.0
-dotnet add package Azure.Messaging.ServiceBus --version 7.18.0
-dotnet add package Azure.Identity --version 1.11.0
-
-# Monitoring & Logging
-dotnet add package Microsoft.ApplicationInsights.WorkerService --version 2.22.0
-dotnet add package Microsoft.Extensions.Logging.ApplicationInsights --version 2.22.0
-```
+> Use `/tenantId` as the partition key from day one, even for a single-client POC — see [08-AIOps-Solution-Architecture-Review.md §5.1](08-AIOps-Solution-Architecture-Review.md#51-multi-tenant-control-plane--data-plane-split).
 
 ---
 
-## Project Structure (Updated 2026)
+## Building the MCP Tool Server
 
+Instead of defining tools as OpenAPI functions per agent, expose them once as a **remote MCP server**. We build this in **Python** (Azure Functions Python v2 programming model) — the official `mcp_tool_trigger` decorator is lighter-weight to scaffold in Python than the equivalent .NET attributes, and it keeps the tool surface fast to iterate on during the POC. The orchestrator and Repair Agent remain .NET (see [08-AIOps-Solution-Architecture-Review.md](08-AIOps-Solution-Architecture-Review.md) for the full language-choice rationale). Both Diagnosis Agent and Verify Agent connect to this one server through Foundry's **Toolbox**.
+
+**File: `src/mcp-server/function_app.py`**
+
+```python
+import json
+import logging
+import azure.functions as func
+
+from services.service_bus_evidence import peek_dead_letter
+from services.pattern_search import find_similar_patterns
+
+app = func.FunctionApp()
+
+_PEEK_DLQ_PROPERTIES = json.dumps([
+    {"propertyName": "namespace", "propertyType": "string", "description": "Service Bus namespace name", "isRequired": True},
+    {"propertyName": "queue", "propertyType": "string", "description": "Queue or subscription name", "isRequired": True},
+    {"propertyName": "count", "propertyType": "integer", "description": "Number of messages to peek (max 20)", "isRequired": False},
+])
+
+
+@app.mcp_tool_trigger(
+    arg_name="context",
+    tool_name="peek_dlq_messages",
+    description="Peek up to N messages from a Service Bus dead-letter queue without removing them.",
+    tool_properties=_PEEK_DLQ_PROPERTIES,
+)
+def peek_dlq_messages(context: str) -> str:
+    args = json.loads(context)["arguments"]
+    namespace = args["namespace"]
+    queue = args["queue"]
+    count = min(int(args.get("count", 5)), 20)
+
+    logging.info("MCP tool peek_dlq_messages invoked for %s/%s", namespace, queue)
+    messages = peek_dead_letter(namespace, queue, count)
+    return json.dumps(messages)
+
+
+_SEARCH_PATTERNS_PROPERTIES = json.dumps([
+    {"propertyName": "errorSignature", "propertyType": "string", "description": "Normalized error signature or message text", "isRequired": True},
+    {"propertyName": "tenantId", "propertyType": "string", "description": "Tenant identifier to scope the search", "isRequired": True},
+])
+
+
+@app.mcp_tool_trigger(
+    arg_name="context",
+    tool_name="search_similar_patterns",
+    description="Vector search Azure AI Search for previously learned incident patterns similar to the given error signature.",
+    tool_properties=_SEARCH_PATTERNS_PROPERTIES,
+)
+def search_similar_patterns(context: str) -> str:
+    args = json.loads(context)["arguments"]
+    matches = find_similar_patterns(args["errorSignature"], args["tenantId"], top_k=5)
+    return json.dumps(matches)
 ```
-src/
-├── Continuum.Ops.AIFoundry/              # AI Foundry managed agents
-│   ├── diagnosis-agent/
-│   │   ├── flow.dag.yaml                 # Promptflow definition
-│   │   ├── evidence_collector.py
-│   │   ├── pattern_matcher.py
-│   │   └── diagnosis_flow.py
-│   ├── verify-agent/
-│   │   ├── flow.dag.yaml
-│   │   ├── outcome_validator.py
-│   │   └── verify_flow.py
-│   └── deployment/
-│       ├── diagnosis-deployment.yaml
-│       └── verify-deployment.yaml
-├── Continuum.Ops.Functions/              # Azure Functions (.NET 8)
-│   ├── Orchestrators/
-│   │   └── IncidentOrchestrator.cs
-│   ├── Agents/
-│   │   └── RepairAgent.cs
-│   ├── Services/
-│   │   ├── PolicyEngine.cs
-│   │   ├── ToolRegistry.cs
-│   │   └── AuditService.cs
-│   ├── Tools/
-│   │   ├── ServiceBusTools.cs
-│   │   ├── ErpTools.cs
-│   │   └── ITool.cs
-│   ├── Models/
-│   ├── Extensions/
-│   └── Program.cs
-├── Continuum.Ops.Shared/                 # Shared models and utilities
-│   ├── Models/
-│   ├── Constants/
-│   └── Extensions/
-└── Infrastructure/                        # Infrastructure as Code
-    ├── bicep/
-    │   ├── main.bicep
-    │   ├── ai-foundry.bicep
-    │   └── functions.bicep
-    └── terraform/                         # Alternative IaC
+
+**File: `src/mcp-server/requirements.txt`**
+
+```text
+azure-functions>=1.24.0
+azure-cosmos
+azure-search-documents
+azure-servicebus
+azure-identity
 ```
 
----
+**`host.json` — MCP server configuration:**
 
-## Agent 1: Diagnosis Agent Implementation
-
-### Overview
-The Diagnosis Agent is the **core AI reasoning component** that performs:
-1. **Evidence Collection** - Gathers data from Service Bus, App Insights, and historical patterns
-2. **Root Cause Analysis** - Uses GPT-4o to analyze failure patterns
-3. **Repair Planning** - Generates actionable repair steps with confidence scores
-
-**Key Metrics:**
-- 1 GPT-4o call per incident (~2,600 tokens average)
-- Cost: ~$0.0078 per diagnosis
-- Target latency: <3 seconds
-
-### 3.1 Create Diagnosis Agent Service
-
-**File: `Continuum.Ops.Functions/Agents/DiagnosisAgent.cs`**
-
-```csharp
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Azure.AI.OpenAI;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
-
-namespace Continuum.Ops.Functions.Agents;
-
-public class DiagnosisAgent
+```json
 {
-    private readonly Kernel _kernel;
-    private readonly ILogger<DiagnosisAgent> _logger;
-    private readonly IChatCompletionService _chatService;
-
-    public DiagnosisAgent(Kernel kernel, ILogger<DiagnosisAgent> logger)
-    {
-        _kernel = kernel;
-        _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+  "version": "2.0",
+  "extensions": {
+    "mcp": {
+      "instructions": "Continuum-Ops evidence and repair tools for AI agents diagnosing Service Bus incidents.",
+      "serverName": "ContinuumOpsTools",
+      "serverVersion": "1.0.0",
+      "system": {
+        "webhookAuthorizationLevel": "System"
+      }
     }
+  }
+}
+```
 
-    public async Task<DiagnosisResult> DiagnoseAsync(
-        string incidentId,
-        Dictionary<string, object> evidence,
-        CancellationToken cancellationToken = default)
-    {
-        var startTime = DateTime.UtcNow;
-        _logger.LogInformation("Starting diagnosis for incident {IncidentId}", incidentId);
+Deploy this Function app, then register its endpoint (`https://<app>.azurewebsites.net/runtime/webhooks/mcp`) as a **custom MCP server** in the Foundry portal's Add Tools catalog, using the function's system key (`mcp_extension`) for authentication. Once added, publish it as a versioned entry in the project's **Toolbox** so both agents reference the same governed tool set. See [src/mcp-server/](../src/mcp-server/) for the full runnable scaffold, including additional tools (`query_application_logs`, `replay_messages`, `check_dlq_depth`, `query_erp`, `upsert_pattern`).
 
-        try
-        {
-            // Step 1: Build comprehensive context from evidence
-            var context = await BuildDiagnosisContextAsync(evidence, cancellationToken);
+---
 
-            // Step 2: Execute single GPT-4o call with structured output
-            var diagnosis = await ExecuteDiagnosisAsync(context, cancellationToken);
+## Diagnosis Agent (Prompt Agent)
 
-            // Step 3: Validate and enrich diagnosis
-            var result = await ValidateDiagnosisAsync(diagnosis, cancellationToken);
+### Portal-first (recommended for the POC)
+1. In the Foundry portal, create a new **Prompt Agent** named `diagnosis-agent`.
+2. Select the `gpt-4o` model deployment.
+3. Attach the `ContinuumOpsTools` Toolbox entry and enable only the tools this agent needs: `peek_dlq_messages`, `query_application_logs`, `search_similar_patterns`.
+4. Set the agent instructions:
 
-            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
-            _logger.LogInformation(
-                "Diagnosis completed for {IncidentId} in {Duration}s with confidence {Confidence}",
-                incidentId, duration, result.Confidence);
+```text
+You are an expert Azure Service Bus diagnostician specializing in dead-letter queue analysis.
 
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Diagnosis failed for incident {IncidentId}", incidentId);
-            throw;
-        }
-    }
+Given the evidence available through your tools:
+1. Identify the root cause with precision.
+2. Generate a repair plan with specific, executable actions.
+3. Provide a confidence score (0.0-1.0).
 
-    private async Task<DiagnosisContext> BuildDiagnosisContextAsync(
-        Dictionary<string, object> evidence,
-        CancellationToken cancellationToken)
-    {
-        var context = new DiagnosisContext
-        {
-            Evidence = evidence,
-            Timestamp = DateTime.UtcNow
-        };
-
-        // Collect DLQ message sample
-        if (evidence.ContainsKey("dlqMessages"))
-        {
-            context.DlqSample = JsonSerializer.Serialize(evidence["dlqMessages"]);
-        }
-
-        // Retrieve similar historical patterns using vector search
-        if (evidence.ContainsKey("errorSignature"))
-        {
-            context.HistoricalPatterns = await SearchSimilarPatternsAsync(
-                evidence["errorSignature"].ToString()!,
-                cancellationToken);
-        }
-
-        // Get application logs from App Insights
-        if (evidence.ContainsKey("namespace"))
-        {
-            context.ApplicationLogs = await QueryAppInsightsAsync(
-                evidence["namespace"].ToString()!,
-                cancellationToken);
-        }
-
-        return context;
-    }
-
-    private async Task<DiagnosisResult> ExecuteDiagnosisAsync(
-        DiagnosisContext context,
-        CancellationToken cancellationToken)
-    {
-        // Build system prompt with best practices from 2026
-        var systemPrompt = """
-            You are an expert Azure Service Bus diagnostician specializing in dead-letter queue analysis.
-            
-            Your task:
-            1. Analyze the provided evidence (DLQ messages, logs, historical patterns)
-            2. Identify the root cause with precision
-            3. Generate a repair plan with specific, executable actions
-            4. Provide a confidence score (0.0-1.0) for your diagnosis
-            
-            Output Format (JSON):
-            {
-                "rootCause": "Brief description of the core issue",
-                "category": "MessageFormat|DependencyFailure|ConfigurationError|DataIssue",
-                "confidence": 0.95,
-                "riskLevel": "Low|Medium|High",
-                "evidenceCitations": ["Quote from logs", "Quote from message"],
-                "repairPlan": [
-                    {
-                        "action": "CreateCustomer",
-                        "parameters": {"customerId": "12345", "name": "ACME Corp"},
-                        "reasoning": "Message references non-existent customer"
-                    }
-                ],
-                "preventionRecommendations": ["Add customer validation before publishing"]
-            }
-            
-            Rules:
-            - Only suggest actions that are safe and reversible
-            - If confidence < 0.7, set riskLevel to "High" and recommend human approval
-            - Cite specific evidence for every claim
-            - Keep repair plans minimal - only essential actions
-            """;
-
-        var userPrompt = $"""
-            Incident Evidence:
-            
-            DLQ Message Sample:
-            {context.DlqSample}
-            
-            Application Logs (last 15 minutes):
-            {context.ApplicationLogs}
-            
-            Similar Historical Patterns:
-            {JsonSerializer.Serialize(context.HistoricalPatterns, new JsonSerializerOptions { WriteIndented = true })}
-            
-            Please diagnose this incident and provide a structured repair plan.
-            """;
-
-        var chatHistory = new ChatHistory();
-        chatHistory.AddSystemMessage(systemPrompt);
-        chatHistory.AddUserMessage(userPrompt);
-
-        // Use GPT-4o with JSON mode for structured output
-        var executionSettings = new AzureOpenAIPromptExecutionSettings
-        {
-            Temperature = 0.2,  // Low temperature for deterministic outputs
-            MaxTokens = 1500,
-            ResponseFormat = "json_object",  // Force JSON output
-            ToolCallBehavior = ToolCallBehavior.EnableKernelFunctions  // Enable function calling
-        };
-
-        var response = await _chatService.GetChatMessageContentAsync(
-            chatHistory,
-            executionSettings,
-            _kernel,
-            cancellationToken);
-
-        var diagnosisJson = response.Content ?? "{}";
-        var diagnosis = JsonSerializer.Deserialize<DiagnosisResult>(diagnosisJson)
-            ?? throw new InvalidOperationException("Failed to parse diagnosis result");
-
-        return diagnosis;
-    }
-
-    private async Task<List<PatternMatch>> SearchSimilarPatternsAsync(
-        string errorSignature,
-        CancellationToken cancellationToken)
-    {
-        // TODO: Implement vector search against Azure AI Search
-        // For now, return empty list
-        await Task.CompletedTask;
-        return new List<PatternMatch>();
-    }
-
-    private async Task<string> QueryAppInsightsAsync(
-        string namespaceName,
-        CancellationToken cancellationToken)
-    {
-        // TODO: Implement KQL query against Application Insights
-        await Task.CompletedTask;
-        return "[No logs available]";
-    }
-
-    private async Task<DiagnosisResult> ValidateDiagnosisAsync(
-        DiagnosisResult diagnosis,
-        CancellationToken cancellationToken)
-    {
-        // Validation rules
-        if (diagnosis.Confidence < 0.5)
-        {
-            diagnosis.RiskLevel = "High";
-            diagnosis.RequiresApproval = true;
-        }
-
-        if (diagnosis.RepairPlan.Count > 5)
-        {
-            _logger.LogWarning("Diagnosis contains {Count} repair actions - may be too complex",
-                diagnosis.RepairPlan.Count);
-        }
-
-        await Task.CompletedTask;
-        return diagnosis;
-    }
+Output strict JSON:
+{
+  "rootCause": "string",
+  "category": "MessageFormat|DependencyFailure|ConfigurationError|DataIssue",
+  "confidence": 0.0,
+  "riskLevel": "Low|Medium|High",
+  "evidenceCitations": ["string"],
+  "repairPlan": [{"action": "string", "parameters": {}, "reasoning": "string"}],
+  "preventionRecommendations": ["string"]
 }
 
-// Supporting models
-public class DiagnosisContext
+Rules:
+- Only suggest actions that are safe and reversible.
+- If confidence < 0.7, set riskLevel to "High" and flag requiresApproval.
+- Cite specific tool output for every claim.
+```
+
+5. Test in the playground with a sample incident, then **Publish** to get a stable endpoint.
+
+### Code-first (CI/CD)
+
+Define the same agent as code so it can be version-controlled and deployed through a pipeline, using the Foundry SDK/REST API against your project endpoint (see the [Responses API quickstart](https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/responses-api) for exact SDK syntax for your chosen language/version).
+
+### Invoking the Diagnosis Agent from the Orchestrator
+
+```csharp
+public class DiagnosisAgentClient
 {
-    public Dictionary<string, object> Evidence { get; set; } = new();
-    public DateTime Timestamp { get; set; }
-    public string DlqSample { get; set; } = string.Empty;
-    public string ApplicationLogs { get; set; } = string.Empty;
-    public List<PatternMatch> HistoricalPatterns { get; set; } = new();
+    private readonly HttpClient _httpClient; // configured with Foundry project endpoint + Entra auth
+    private readonly ILogger<DiagnosisAgentClient> _logger;
+
+    public DiagnosisAgentClient(HttpClient httpClient, ILogger<DiagnosisAgentClient> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<DiagnosisResult> DiagnoseAsync(string incidentId, Dictionary<string, object> evidence, CancellationToken ct)
+    {
+        // Calls the published Diagnosis Agent through the Responses API —
+        // Foundry handles the tool-calling loop, session state, and tracing internally.
+        var request = new
+        {
+            agent = "diagnosis-agent",
+            input = System.Text.Json.JsonSerializer.Serialize(evidence),
+            metadata = new { incidentId }
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("responses", request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<ResponsesApiResult>(cancellationToken: ct);
+        return System.Text.Json.JsonSerializer.Deserialize<DiagnosisResult>(payload!.OutputText)!;
+    }
 }
 
 public class DiagnosisResult
@@ -599,150 +383,118 @@ public class RepairAction
     public string Reasoning { get; set; } = string.Empty;
 }
 
-public class PatternMatch
+public class ResponsesApiResult
 {
-    public string PatternId { get; set; } = string.Empty;
-    public double Similarity { get; set; }
-    public string Category { get; set; } = string.Empty;
-    public double SuccessRate { get; set; }
+    public string OutputText { get; set; } = string.Empty;
 }
 ```
 
-### 3.2 Create Diagnosis Function Endpoint
+> **Key metrics**: ~2,600 tokens/call, ~$0.0078/diagnosis, target latency <3s (P95).
 
-**File: `Continuum.Ops.Functions/Functions/DiagnosisFunction.cs`**
+---
+
+## Verify Agent (Prompt Agent)
+
+Same authoring pattern as Diagnosis Agent:
+- **Tools attached**: `check_dlq_depth`, `query_erp`, `upsert_pattern`.
+- **Instructions**: validate the repair achieved the desired business outcome, then extract a learning pattern; output `{verified: bool, evidence, failure_reason?, pattern_summary}`.
+- **Runs**: only if the Repair Agent succeeded.
+- **Key metrics**: ~700 tokens/call, ~$0.0021/verification.
+
+Invocation follows the identical `DiagnosisAgentClient` pattern above, targeting `agent = "verify-agent"`.
+
+---
+
+## Repair Agent (Deterministic Function)
+
+Unchanged from a deterministic-execution standpoint — this agent makes **no LLM calls**. Recommended evolution: externalize each repair action as a declarative policy document (YAML/JSON) rather than hardcoded per-scenario C#, so new repair actions can be added without a code deployment.
 
 ```csharp
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Text.Json;
-
-namespace Continuum.Ops.Functions.Functions;
-
-public class DiagnosisFunction
+[Function(nameof(ExecuteRepairPlan))]
+public async Task<RepairResult> ExecuteRepairPlan(
+    [ActivityTrigger] RepairPlanRequest request)
 {
-    private readonly DiagnosisAgent _diagnosisAgent;
-    private readonly ILogger<DiagnosisFunction> _logger;
+    var policy = await _policyStore.LoadAsync(request.Action, request.TenantId);
+    if (policy is null)
+        return RepairResult.Failed($"No policy registered for action '{request.Action}'");
 
-    public DiagnosisFunction(
-        DiagnosisAgent diagnosisAgent,
-        ILogger<DiagnosisFunction> logger)
-    {
-        _diagnosisAgent = diagnosisAgent;
-        _logger = logger;
-    }
+    if (policy.RequiresDryRun && !request.DryRunApproved)
+        return RepairResult.PendingApproval(policy);
 
-    [Function("Diagnose")]
-    public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "incidents/{incidentId}/diagnose")]
-        HttpRequestData req,
-        string incidentId,
-        FunctionContext executionContext)
-    {
-        _logger.LogInformation("Diagnosis request received for incident {IncidentId}", incidentId);
-
-        try
-        {
-            // Parse request body
-            var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var evidence = JsonSerializer.Deserialize<Dictionary<string, object>>(requestBody)
-                ?? new Dictionary<string, object>();
-
-            // Execute diagnosis
-            var result = await _diagnosisAgent.DiagnoseAsync(incidentId, evidence);
-
-            // Return structured response
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "application/json");
-            await response.WriteAsJsonAsync(result);
-
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Diagnosis failed for incident {IncidentId}", incidentId);
-
-            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteAsJsonAsync(new { error = ex.Message });
-            return errorResponse;
-        }
-    }
+    return await policy.ExecuteAsync(request.Parameters);
 }
 ```
 
 ---
 
-## Agent 2: Repair Agent Implementation
+## Orchestration Layer (Durable Functions)
 
-1. **Set up development environment** with all required Azure services
-2. **Implement Diagnosis Agent first** - it's the core AI component
-3. **Build basic tools** for Service Bus message replay
-4. **Test with synthetic incidents** before connecting to real systems
-5. **Add monitoring and alerting** for cost and performance tracking
-6. **Gradually expand tool registry** based on actual failure patterns
+The orchestrator owns branching, retries, and compensation — it calls the Diagnosis Agent, then the Repair Agent, then the Verify Agent, using the `alertId` as the orchestration instance ID for idempotency (see [01-Technical-Architecture.md](01-Technical-Architecture.md#alert-ingestion-async-buffer-event-grid)).
 
-This implementation guide provides a solid foundation for building your AI agents. The key is to start simple, test thoroughly, and iterate based on real-world usage patterns.
+```csharp
+[Function(nameof(IncidentOrchestrator))]
+public async Task<IncidentResult> IncidentOrchestrator(
+    [OrchestrationTrigger] TaskOrchestrationContext context)
+{
+    var evidence = context.GetInput<IncidentEvidence>();
+
+    var diagnosis = await context.CallActivityAsync<DiagnosisResult>(nameof(CallDiagnosisAgent), evidence);
+
+    if (diagnosis.RequiresApproval)
+        await context.WaitForExternalEvent<bool>("ApprovalGranted");
+
+    var repair = await context.CallActivityAsync<RepairResult>(nameof(ExecuteRepairPlan), diagnosis.RepairPlan);
+
+    if (repair.Success)
+    {
+        var verification = await context.CallActivityAsync<VerificationResult>(nameof(CallVerifyAgent), repair);
+        return IncidentResult.From(diagnosis, repair, verification);
+    }
+
+    return IncidentResult.Failed(diagnosis, repair);
+}
+```
 
 ---
 
 ## Deployment & Testing
 
-### Deploy to Azure
-
-**Deploy using Azure CLI:**
-
-```bash
-# Create Azure resources
-az deployment group create \
-  --resource-group rg-continuumops-prod \
-  --template-file Infrastructure/bicep/main.bicep \
+```powershell
+az deployment group create `
+  --resource-group rg-continuumops-prod `
+  --template-file Infrastructure/bicep/main.bicep `
   --parameters environment=prod
 
-# Publish Functions app
 cd src/Continuum.Ops.Functions
 func azure functionapp publish func-continuumops-prod
 ```
 
-### Monitor Agent Performance
-
-```bash
-# View agent metrics in Application Insights
-az monitor app-insights metrics show \
-  --app func-continuumops-prod \
-  --resource-group rg-continuumops-prod \
-  --metric "requests/duration" \
-  --aggregation avg
-```
+Test each Prompt Agent independently in the **Foundry playground** before wiring it into the orchestrator — this exercises the MCP tool connectivity, permissions, and instructions in isolation.
 
 ---
 
-## Best Practices & Agent Design Patterns
+## Tracing, Evaluation & Optimization
 
-### 1. **Use Threads for Conversation Context**
-Azure AI Foundry Agents use threads to maintain conversation state. Each incident gets its own thread.
+Use Foundry's native development lifecycle instead of building custom tooling:
 
-### 2. **Implement Idempotent Tools**
-All tool functions should be idempotent - safe to call multiple times with the same parameters.
+| Step | Foundry capability |
+|---|---|
+| **Trace** | Agent tracing shows every model call, tool invocation, and decision per incident. |
+| **Evaluate** | Run built-in evaluations against a labeled set of past incidents to catch diagnosis-quality regressions before publishing a new agent version. |
+| **Optimize** | The **Agent Optimizer** can automatically improve an agent's instructions based on evaluation feedback — use this instead of manual prompt tuning as the pattern library grows. |
+| **Publish/Rollback** | Every iteration is auto-snapshotted; roll back to a prior version if a new instruction set regresses diagnosis quality. |
 
-### 3. **Keep Instructions Focused**
-Agent instructions should be specific and task-oriented. Avoid generic "helpful assistant" prompts.
+---
 
-### 4. **Monitor Token Usage**
-Track GPT-4o token consumption per incident:
-- Diagnosis: ~2,600 tokens (~$0.0078)
-- Verify: ~700 tokens (~$0.0021)
-- Total per incident: ~$0.01
+## Best Practices
 
-### 5. **Use Structured Outputs**
-Always request JSON responses using `ResponseFormat = AssistantResponseFormat.JsonObject`
-
-### 6. **Implement Circuit Breakers**
-Add failure thresholds to prevent runaway costs if agents malfunction.
-
-### 7. **Version Your Assistants**
-Create new assistant versions instead of modifying existing ones for safe rollbacks.
+1. **One narrow job per Prompt Agent.** Diagnosis and Verify each do one thing — resist the urge to merge them into a single "do everything" agent (see the token-budget rationale in [01-Technical-Architecture.md](01-Technical-Architecture.md)).
+2. **Govern tools centrally.** Add/version tools once in the Toolbox; don't duplicate tool definitions per agent.
+3. **Idempotent tools.** Every MCP tool function must be safe to call multiple times with the same input.
+4. **Structured JSON outputs only.** Never let an agent return free text for anything the orchestrator has to parse.
+5. **Confidence-gated approval.** Route low-confidence diagnoses to human approval (Teams Adaptive Card) instead of auto-executing.
+6. **Trace everything.** Use Foundry's native tracing rather than custom Application Insights events for agent-level decisions.
+7. **Version agents like code.** Treat each published agent version as an immutable artifact; roll forward/back explicitly.
 
 ---
 
@@ -750,32 +502,35 @@ Create new assistant versions instead of modifying existing ones for safe rollba
 
 | Strategy | Impact | Implementation |
 |----------|--------|----------------|
-| **Cache similar patterns** | 30-40% token reduction | Use AI Search for semantic recall |
-| **Minimize tool definitions** | 15-20% reduction | Only attach needed tools per agent |
-| **Use GPT-4o-mini for simple tasks** | 60-80% cost reduction | Use for simple validation/formatting |
-| **Batch verifications** | 25% reduction | Verify multiple incidents together |
-| **Smart prompt compression** | 10-15% reduction | Remove redundant context |
+| **Cache similar patterns** | 30–40% token reduction | `search_similar_patterns` MCP tool against AI Search |
+| **Minimize attached tools per agent** | 15–20% reduction | Only enable the tools each Prompt Agent actually needs |
+| **Use a smaller model for simple tasks** | 60–80% cost reduction | Consider a lighter model for basic validation/formatting steps |
+| **Batch verifications** | 25% reduction | Verify multiple related incidents together where safe |
+| **Prompt compression** | 10–15% reduction | Trim redundant context before sending to the agent |
 
-**Target Cost per Incident:** <$0.01
+**Target cost per incident: <$0.01** (Diagnosis ~$0.0078 + Verify ~$0.0021).
 
 ---
 
 ## References
 
-### Azure AI Foundry Agents
-- **[Azure AI Foundry Agents Overview](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/overview)** ⭐ PRIMARY REFERENCE
-- [Assistants API Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/assistant)
-- [Azure AI Projects SDK](https://learn.microsoft.com/en-us/dotnet/api/overview/azure/ai.projects-readme)
-- [Function Calling with Assistants](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/assistant-functions)
+### Microsoft Foundry Agent Service
+- **[Microsoft Foundry Agent Service — Overview](https://learn.microsoft.com/en-us/azure/foundry/agents/overview)** ⭐ PRIMARY REFERENCE
+- [Agent development lifecycle](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/development-lifecycle)
+- [Responses API quickstart](https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/responses-api)
+- [Toolbox](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/tools/toolbox)
+- [Agent Optimizer overview](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/agent-optimizer-overview)
+
+### Azure Functions MCP Extension
+- [Model Context Protocol bindings for Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-mcp)
+- [Create a tool endpoint in your remote MCP server](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-mcp-tool-trigger)
 
 ### Azure Services
 - [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
-- [Azure Functions .NET Worker](https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-worker-guide)
 - [Durable Functions](https://learn.microsoft.com/en-us/azure/azure-functions/durable/)
 - [Azure AI Search Vector Search](https://learn.microsoft.com/en-us/azure/search/vector-search-overview)
-- [Service Bus .NET SDK](https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues)
 
-### Best Practices
-- [Azure AI Foundry Best Practices](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/best-practices)
-- [Prompt Engineering Guide](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/prompt-engineering)
-- [Cost Management for Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/manage-costs)
+### Related Continuum-Ops Docs
+- [08-AIOps-Solution-Architecture-Review.md](08-AIOps-Solution-Architecture-Review.md) — full rationale for the Foundry Agents vs. custom-build decision
+- [01-Technical-Architecture.md](01-Technical-Architecture.md) — system-wide architecture
+- [Legacy Assistants API implementation](legacy/06-AI-Agent-Implementation-AssistantsAPI-Legacy.md) — superseded reference

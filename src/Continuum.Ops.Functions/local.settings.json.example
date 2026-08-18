@@ -1,0 +1,25 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+
+    "FOUNDRY_PROJECT_ENDPOINT": "https://<your-foundry-resource>.services.ai.azure.com",
+    "FOUNDRY_API_VERSION": "preview",
+    "DIAGNOSIS_AGENT_ID": "<diagnosis-agent-id-from-foundry-portal>",
+    "VERIFY_AGENT_ID": "<verify-agent-id-from-foundry-portal>",
+
+    "MCP_SERVER_BASE_URL": "https://<your-python-mcp-function-app>.azurewebsites.net",
+
+    "SERVICEBUS_FQDN": "<your-namespace>.servicebus.windows.net",
+
+    "COSMOS_ENDPOINT": "https://<your-cosmos-account>.documents.azure.com:443/",
+    "COSMOS_DATABASE_NAME": "ContinuumOps",
+    "COSMOS_INCIDENTS_CONTAINER": "Incidents",
+
+    "REPAIR_MAX_MESSAGES_PER_RUN": "10",
+    "REPAIR_MIN_CONFIDENCE": "0.7",
+
+    "TEAMS_APPROVAL_WEBHOOK_URL": "https://<your-teams-workflow-webhook>"
+  }
+}

@@ -70,7 +70,7 @@ graph TB
         FUNC["Function App<br/>func-continuumops-prod-eastus"]
         PLAN["App Service Plan<br/>asp-continuumops-prod-eastus"]
         COSMOS["Cosmos DB<br/>cosmos-continuumops-prod-eastus"]
-        AGENT["Azure AI Agent Service<br/>agent-continuumops-prod-eastus"]
+        AGENT["Microsoft Foundry Agent Service<br/>agent-continuumops-prod-eastus"]
         OPENAI["Azure OpenAI<br/>aoai-continuumops-prod-eastus"]
         SEARCH["AI Search<br/>srch-continuumops-prod-eastus"]
         INSIGHTS["App Insights<br/>appi-continuumops-prod-eastus"]

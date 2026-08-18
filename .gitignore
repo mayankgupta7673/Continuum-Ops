@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+*.user
+
+# Azure Functions
+local.settings.json
+.azurefunctions/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Bicep / ARM
+*.bicep.json
+main.parameters.json
+
+# Editor / OS
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

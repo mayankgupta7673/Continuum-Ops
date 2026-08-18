@@ -1,0 +1,21 @@
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      }
+    }
+  },
+  "extensions": {
+    "mcp": {
+      "instructions": "Continuum-Ops evidence and repair tools for AI agents diagnosing and healing Service Bus incidents. Read-only evidence tools (peek, query, search) are always safe to call. Mutating tools (replay_messages, upsert_pattern) should only be invoked by the Repair/Verify workflow after policy approval.",
+      "serverName": "ContinuumOpsTools",
+      "serverVersion": "1.0.0",
+      "system": {
+        "webhookAuthorizationLevel": "System"
+      }
+    }
+  }
+}

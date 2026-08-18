@@ -1,5 +1,5 @@
 # Continuum-Ops: Enterprise AutoHeal Platform
-## 🚀 AI-Native Integration Reliability | Powered by Microsoft AI Foundry
+## 🚀 AI-Native Integration Reliability | Powered by Microsoft Foundry Agent Service
 
 [![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoft-azure&logoColor=white)](https://azure.microsoft.com)
 [![AI Foundry](https://img.shields.io/badge/AI%20Foundry-50E6FF?style=for-the-badge&logo=microsoft&logoColor=black)](https://ai.azure.com)
@@ -117,15 +117,17 @@ graph LR
 
 | Component | Technology | Why Chosen |
 |-----------|-----------|-------------------|
-| 🤖 **Agent Runtime** | **Azure AI Agent Service** | Managed agent orchestration |
+| 🤖 **Agent Runtime** | **Microsoft Foundry Agent Service** (Prompt Agents) | Managed agent orchestration |
 | 👁️ **Detection** | **Azure Monitor** | Native ML-based anomaly detection, zero LLM tokens |
 | 🧠 **LLM** | **GPT-4o** | Fast reasoning, structured output, multimodal |
-| 🛠️ **Tools** | **Azure Functions** | Standard OpenAPI tool definitions |
+| 🛠️ **Tools** | **MCP Tool Server (Python)** | Centrally governed via Foundry Toolbox |
 | 💾 **Memory** | **Azure AI Search** | Vector-based pattern recall |
 
 ---
 
 ## 📚 Documentation
+
+See **[docs/README.md](docs/README.md)** for the full documentation index. Highlights:
 
 ### 🎯 Start Here
 - **[Product Overview](docs/00-Product-Overview.md)** - Vision and internal value proposition
@@ -134,12 +136,16 @@ graph LR
 
 ### 🏗️ Technical Deep-Dive
 - **[Technical Architecture](docs/01-Technical-Architecture.md)** - System design, AI agents, data models
-- **[AI Agent Implementation Guide](docs/06-AI-Agent-Implementation.md)** - Step-by-step Azure AI Foundry Agents development
+- **[AI Agent Implementation Guide](docs/06-AI-Agent-Implementation.md)** - Step-by-step Microsoft Foundry Agent Service development
+- **[AIOps Solution Architecture Review](docs/08-AIOps-Solution-Architecture-Review.md)** - Open-source landscape, Datadog-style collector pattern, Foundry Agents vs custom-build decision
 - **[Ticketing Integration Strategy](docs/07-Ticketing-Integration-Strategy.md)** - ADO, JIRA, ServiceNow integration guide
 - **[API Reference](docs/04-API-Reference.md)** - REST APIs, webhooks
 
 ### 🛡️ Enterprise & Compliance
 - **[Security & Compliance](docs/05-Security-Compliance.md)** - Zero-trust architecture, audit trail, data protection
+
+### 💼 For Management
+- **[Management Presentation](docs/business/Management-Presentation.md)** - Pitch deck for leadership
 
 ## 🎨 Real-World Example
 
@@ -195,7 +201,7 @@ Total time: ~10 minutes | Human effort: 1-click approval
 
 ### Tech Stack
 - **Backend**: .NET 8, Azure Functions
-- **AI**: Azure OpenAI, Azure AI Agent Service
+- **AI**: Azure OpenAI, Microsoft Foundry Agent Service
 - **Data**: Cosmos DB, AI Search
 - **Infrastructure**: Bicep
 

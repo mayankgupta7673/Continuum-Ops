@@ -1,5 +1,5 @@
 # Continuum-Ops: Enterprise AutoHeal Platform
-## Powered by Microsoft AI Foundry & Azure AI Agent Service
+## Powered by Microsoft Foundry Agent Service
 
 ---
 
@@ -11,9 +11,9 @@
 mindmap
   root((Continuum-Ops))
     AI-Powered
-      Azure AI Foundry Agents
+      Microsoft Foundry Prompt Agents
       GPT-4o
-      Semantic Kernel
+      MCP Tool Server
     Zero-Touch Operations
       Auto-discovery
       Self-configuration
@@ -46,7 +46,7 @@ mindmap
 flowchart TB
     subgraph AzurePlatform[Azure Platform]
         AZMON[Azure Monitor<br/>Dynamic Detection]
-        AGENT_SVC[Azure AI Agent Service<br/>Managed Orchestration]
+        AGENT_SVC[Microsoft Foundry Agent Service<br/>Managed Orchestration]
         FUNCTIONS[Azure Functions<br/>Tooling Layer]
     end
     
@@ -70,10 +70,10 @@ flowchart TB
 
 | Layer | Technology | Why Chosen |
 |-------|-----------|-------------------|
-| **AI Orchestration** | **Azure AI Agent Service** | Managed agent hosting |
+| **AI Orchestration** | **Microsoft Foundry Agent Service** | Managed agent hosting (Prompt Agents) |
 | **Detection** | **Azure Monitor** | Native dynamic thresholds (ML), zero LLM tokens for monitoring |
 | **LLM** | **GPT-4o** | Fast structured output, multimodal reasoning, cost-effective |
-| **Tooling** | **OpenAPI + Azure Functions** | Standardized, interchangeable tool definitions |
+| **Tooling** | **MCP Tool Server (Python) + Azure Functions** | Centrally governed via Foundry Toolbox |
 | **Memory** | **Azure AI Search** | Vector-based semantic recall for historical patterns |
 | **Runtime** | **Azure Functions (.NET 8)** | Serverless, scalable execution environment |
 | **Identity** | **Microsoft Entra ID** | Zero-trust authentication backbone |
@@ -108,7 +108,7 @@ graph TB
         end
         
         MEMORY["Agent Memory<br/>AI Search (vectors) + Cosmos DB (metadata)"]
-        TOOLS["Tool Registry<br/>Azure Functions · OpenAPI"]
+        TOOLS["Tool Registry<br/>MCP Server (Python) · Foundry Toolbox"]
     end
     
     subgraph Governance[Governance & Safety]
@@ -156,7 +156,7 @@ Every LLM call has fixed token overhead (system prompt, tool schemas, context). 
 | **Azure Monitor** | Detection — ML-based anomaly detection | **$0** (no LLM) |
 | **Durable Functions Orchestrator** | Routing, state, policy gates, approvals | **$0** (deterministic code) |
 | **Diagnosis Agent** | Evidence collection + Root Cause Analysis + repair planning | **~2,600 tokens** (1 GPT-4o call) |
-| **Repair Agent** | Execute OpenAPI tools (replay, create data, etc.) | **$0** (deterministic code) |
+| **Repair Agent** | Execute MCP-registered tools (replay, create data, etc.) | **$0** (deterministic code) |
 | **Verify Agent** | Validate business outcome + update patterns | **~700 tokens** (1 GPT-4o call) |
 
 > **Total cost per incident: ~$0.01** at GPT-4o rates. See [Technical Architecture — Token Budget](01-Technical-Architecture.md#token-budget-per-incident) for full breakdown.
@@ -176,7 +176,7 @@ Every LLM call has fixed token overhead (system prompt, tool schemas, context). 
 
 #### 3. Repair Agent (Deterministic Code)
 - **Idempotent Execution**: Checks if action already executed before running
-- **OpenAPI Tools**: Calls Azure Functions (replay message, create customer, isolate poison message)
+- **MCP Tools**: Calls the MCP tool server (replay message, create customer, isolate poison message)
 - **Graceful Failure**: Reports success/failure back to orchestrator; does NOT retry autonomously
 
 #### 4. Verify Agent (GPT-4o)
@@ -296,12 +296,23 @@ gantt
 
 ```
 docs/
+├── README.md                            📖 Documentation index (read order)
 ├── 00-Product-Overview.md              ⭐ This document
-├── 01-Technical-Architecture.md        🏗️ System design (Azure AI Agent Service)
+├── 01-Technical-Architecture.md        🏗️ System design (Microsoft Foundry Agent Service)
 ├── 02-Deployment-Guide.md              🚀 Deployment (15 min)
 ├── 03-User-Manual.md                   📖 Operations guide
 ├── 04-API-Reference.md                 🔌 REST API, webhooks
 ├── 05-Security-Compliance.md           🛡️ Security & compliance
+├── 06-AI-Agent-Implementation.md       🤖 Agent build guide (Prompt Agents + MCP)
+├── 07-Ticketing-Integration-Strategy.md 🎫 ADO/JIRA/ServiceNow integration
+├── 08-AIOps-Solution-Architecture-Review.md 🔭 Open-source scan, collector pattern, Foundry vs custom decision
+├── business/
+│   └── Management-Presentation.md      💼 Management-facing pitch deck
+└── legacy/                             🗄️ Superseded approaches (reference only)
+    ├── README.md
+    └── 06-AI-Agent-Implementation-AssistantsAPI-Legacy.md
 ```
+
+Code implementation lives at the repository root in `src/`, `infrastructure/`, and `agents/` — see [docs/README.md](README.md#code) for details.
 
 ---

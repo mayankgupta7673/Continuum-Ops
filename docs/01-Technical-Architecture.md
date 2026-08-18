@@ -1,5 +1,5 @@
 # Continuum-Ops: Technical Architecture
-## Powered by Azure AI Agent Service
+## Powered by Microsoft Foundry Agent Service
 
 ---
 
@@ -157,7 +157,7 @@ sequenceDiagram
 
 ---
 
-## Azure AI Agent Service Design
+## Microsoft Foundry Agent Service Design
 
 ### Agent Topology
 
@@ -180,7 +180,7 @@ graph TB
     end
 
     subgraph Skills[Tooling / Skills]
-        OPENAPI["OpenAPI Definitions<br/>Azure Functions"]
+        MCP["MCP Tool Server<br/>Python Azure Functions"]
         SEARCH["Vector Search<br/>Azure AI Search"]
     end
     
@@ -189,7 +189,7 @@ graph TB
     DIAG -->|Queries patterns| SEARCH
     DIAG -->|Diagnosis + plan| ORCH
     ORCH -->|Execute plan| REPAIR
-    REPAIR -->|Calls tools| OPENAPI
+    REPAIR -->|Calls tools| MCP
     REPAIR -->|Result| ORCH
     ORCH -->|Verify outcome| VERIFY
     VERIFY -->|Update patterns| SEARCH
@@ -227,10 +227,10 @@ graph TB
 
 #### 4. Repair Agent (Deterministic Code — 0 LLM Calls)
 *   **Role**: Execute the repair plan proposed by the Diagnosis Agent.
-*   **Implementation**: Deterministic .NET code that calls Azure Functions via OpenAPI definitions. No LLM involved.
+*   **Implementation**: Deterministic .NET code that calls tools on the MCP tool server (Python Azure Functions). No LLM involved.
 *   **Key Properties**: Idempotent execution, graceful failure reporting, no autonomous retries.
 
-**Tool Interface (OpenAPI):**
+**Underlying tool HTTP contract (exposed to agents via MCP — see decision below):**
 ```yaml
 paths:
   /servicebus/replay:
@@ -251,9 +251,10 @@ paths:
           type: integer
 ```
 
-**OpenAPI vs MCP Decision:**
-*   We deliberately chose **OpenAPI** over the emerging Model Context Protocol (MCP) for tool definitions.
-*   **Rationale**: OpenAPI is the industry standard, natively supported by Azure Functions/Logic Apps/Power Platform. MCP is still experimental and lacks native Azure integration. OpenAPI integrates directly with Azure AD (Entra ID) authentication flows.
+**Tool Interface Decision (revised — see [08-AIOps-Solution-Architecture-Review.md](08-AIOps-Solution-Architecture-Review.md#45-mcp-vs-openapi-for-tools--reverse-the-existing-decision)):**
+*   **We now use the Model Context Protocol (MCP)** for tool definitions, hosted as a custom MCP server on Azure Functions (`/runtime/webhooks/mcp`) and registered centrally in Foundry's **Toolbox**.
+*   **Rationale (updated)**: An earlier version of this document rejected MCP as "still experimental." That is no longer accurate — Microsoft Foundry Agent Service now has native remote/custom MCP support and a Toolbox feature purpose-built for centrally managing and versioning MCP tool sets across agents. MCP tools are reusable across both Diagnosis and Verify Agents, support Entra managed-identity or OBO authentication the same way OpenAPI did, and give us one governed tool surface instead of duplicated OpenAPI function definitions per agent.
+*   The raw OpenAPI YAML example above remains valid as a description of the *underlying HTTP contract* each tool implements — MCP is the calling convention layered on top, not a replacement for the Azure Function endpoints themselves.
 
 #### 5. Verify Agent (GPT-4o — 1 LLM Call, Conditional)
 *   **Role**: Validate that the repair achieved the desired business outcome, then extract a learning pattern.
@@ -291,6 +292,8 @@ flowchart LR
 - Filtering: only forward alerts matching our subscriptions
 
 **Alternative considered**: Azure Service Bus queue as buffer. Rejected because Event Grid is lower-latency for event-driven push and avoids adding another Service Bus dependency.
+
+**Complementary collector path (added — see [08-AIOps-Solution-Architecture-Review.md §3](08-AIOps-Solution-Architecture-Review.md#3-reference-architecture-the-datadog-collector-pattern))**: Event Grid remains the fast path for the specific alert that *triggers* an incident. Separately, Diagnostic Settings on Service Bus, App Service, SQL, and AKS resources stream into an **Event Hub namespace**, consumed by a normalizer Function — the same collector pattern Datadog, Splunk, and SumoLogic use to ingest Azure telemetry. This second path enriches the Diagnosis Agent's evidence bundle with broader context beyond the triggering alert, and is the on-ramp to multi-tenant, multi-source ingestion at product scale.
 
 **Idempotency**: The Durable Functions orchestrator uses `alertId` from Azure Monitor as the orchestration instance ID. If Event Grid retries a delivery, the second `StartNewAsync(alertId)` call is a no-op because Durable Functions deduplicates by instance ID.
 
@@ -368,7 +371,7 @@ With 7 agents in a chain, you pay this overhead 7 times per incident. Worse, int
 | Agent | LLM Calls | System Prompt | Input Context | Output |
 |-------|-----------|---------------|---------------|--------|
 | **Diagnosis Agent** | 1 call | ~500 tokens (focused RCA instructions) | DLQ message body (truncated to 1K chars) + App Insights errors (top 5, ~500 chars) + similar patterns from AI Search (top 3, ~300 chars) | Structured JSON: `{root_cause, confidence, risk_level, repair_plan[]}` |
-| **Repair Agent** | 0 LLM calls (deterministic) | N/A — this is code, not an LLM agent | Action plan from Diagnosis Agent | Executes OpenAPI tools, returns success/failure |
+| **Repair Agent** | 0 LLM calls (deterministic) | N/A — this is code, not an LLM agent | Action plan from Diagnosis Agent | Executes MCP-registered tools, returns success/failure |
 | **Verify Agent** | 1 call (only if repair succeeded) | ~200 tokens (outcome validation) | Expected outcome + current state (DLQ depth, ERP query result) | Structured JSON: `{verified: bool, evidence, failure_reason?}` |
 
 **The Durable Functions Orchestrator** handles all routing, state management, policy gates, approval flow, and error handling — **zero LLM tokens** for orchestration.
@@ -422,12 +425,11 @@ Azure Monitor Dynamic Thresholds replace a custom "Watcher Agent" entirely:
 
 ## Data Architecture
 
-### Deployment Model: Single-Tenant
+### Deployment Model: Single-Tenant Data Plane, Shared Control Plane
 
-> **Decision**: Continuum-Ops is deployed **one instance per Azure subscription**
-> (single-tenant). Earlier drafts referenced multi-tenant partition keys (`tenantId`).
-> This has been removed. Single-tenant simplifies security (data isolation by subscription),
-> partition key design, and RBAC. Multi-tenant can be revisited post-pilot if needed.
+> **Decision (revised — see [08-AIOps-Solution-Architecture-Review.md §5.1](08-AIOps-Solution-Architecture-Review.md#51-multi-tenant-control-plane--data-plane-split))**: Each client's operational data — Service Bus, Cosmos DB evidence store, AI Search pattern index — stays in **that client's own Azure subscription** (data plane isolation, same guarantee as the original single-tenant decision). However, if Continuum-Ops is going to be pitched and sold to multiple clients, the **agent definitions, tool Toolbox, Agent Optimizer runs, and evaluation pipelines** should live in a shared Foundry **control plane**, using Foundry's "bring your own resources" capability to point at each client's own Cosmos DB/AI Search for conversation state.
+>
+> Keep the `tenantId` partition key in Cosmos DB/AI Search **from day one**, even during the single-client POC — it costs nothing at small scale and avoids a schema migration when a second client onboards. Building without it (as previously decided) only makes sense if the product will genuinely never have more than one deployment.
 
 ### Vector Storage: AI Search Is the Single Source of Truth
 
@@ -724,7 +726,7 @@ flowchart TB
     style DEDICATED fill:#90EE90,stroke:#006400,stroke-width:3px
 ```
 
-The platform is designed to be deployed directly into the project's Azure subscription, ensuring complete data isolation and security.
+The platform is designed to be deployed directly into the project's Azure subscription, ensuring complete data isolation and security. For a multi-client product offering, this becomes the **data plane** per client, paired with a shared **control plane** for agent definitions and optimization — see [08-AIOps-Solution-Architecture-Review.md](08-AIOps-Solution-Architecture-Review.md#5-revised-target-architecture).
 
 ---
 
@@ -761,8 +763,9 @@ The platform is designed to be deployed directly into the project's Azure subscr
 | Category | Technology | Version | Purpose |
 |----------|-----------|---------|---------|
 | **LLM** | Azure OpenAI GPT-4o | Latest GA | All diagnosis and verification calls |
-| **AI Orchestration** | Azure AI Agent Service | Preview | Agent hosting (optional — can fall back to direct SDK calls) |
-| **AI Framework** | Semantic Kernel | 1.x | Agent development, tool calling |
+| **AI Orchestration** | Microsoft Foundry Agent Service | GA — Prompt Agents | Fully managed agent hosting, tracing, evaluation, optimizer, versioning |
+| **Tool Governance** | Foundry Toolbox (MCP) | GA | Centrally managed, versioned MCP tool set for both agents |
+| **AI Framework (if Hosted Agents needed later)** | Microsoft Agent Framework | Current | Only required if/when custom multi-agent orchestration code is added — not needed for Prompt Agents |
 | **Orchestration** | Durable Functions | 2.x | Stateful incident workflows |
 | **Runtime** | .NET | 8.0 | Function App runtime |
 | **Async Buffer** | Azure Event Grid | GA | Reliable alert ingestion from Azure Monitor |

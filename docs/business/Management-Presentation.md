@@ -294,7 +294,7 @@ graph TB
 
 | Layer | Technology | Why Chosen |
 |-------|-----------|------------|
-| **AI Orchestration** | Azure AI Agent Service + Semantic Kernel | Managed agent hosting with native Azure integration |
+| **AI Orchestration** | Microsoft Foundry Agent Service (Prompt Agents) | Managed agent hosting with native Azure integration |
 | **Detection** | Azure Monitor (Dynamic Thresholds) | ML-based anomaly detection, zero LLM tokens, zero code |
 | **LLM** | Azure OpenAI GPT-4o | Fast structured output, cost-effective (~$0.01/incident) |
 | **Orchestration** | Azure Durable Functions (.NET 8) | Stateful workflows, deterministic routing, $0 LLM cost |

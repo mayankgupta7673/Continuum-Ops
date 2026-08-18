@@ -1,0 +1,21 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+
+    "SERVICEBUS_FQDN": "<your-namespace>.servicebus.windows.net",
+
+    "SEARCH_ENDPOINT": "https://<your-search-service>.search.windows.net",
+    "SEARCH_INDEX_NAME": "incident-patterns",
+
+    "APPINSIGHTS_RESOURCE_ID": "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/microsoft.insights/components/<app-insights-name>",
+
+    "ERP_API_BASE_URL": "https://<your-apim-instance>.azure-api.net/erp",
+    "ERP_API_SCOPE": "api://<erp-api-app-id>/.default",
+
+    "COSMOS_ENDPOINT": "https://<your-cosmos-account>.documents.azure.com:443/",
+    "COSMOS_DATABASE_NAME": "ContinuumOps",
+    "COSMOS_PATTERNS_CONTAINER": "Patterns"
+  }
+}

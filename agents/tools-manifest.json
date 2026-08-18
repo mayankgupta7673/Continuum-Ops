@@ -1,0 +1,48 @@
+{
+  "toolboxName": "ContinuumOpsTools",
+  "mcpServerSource": "src/mcp-server/function_app.py",
+  "tools": [
+    {
+      "name": "peek_dlq_messages",
+      "type": "read-only",
+      "usedBy": ["diagnosis-agent"],
+      "description": "Non-destructive peek at dead-letter queue messages for evidence gathering."
+    },
+    {
+      "name": "query_application_logs",
+      "type": "read-only",
+      "usedBy": ["diagnosis-agent"],
+      "description": "Runs a KQL query against Application Insights for correlated error traces."
+    },
+    {
+      "name": "search_similar_patterns",
+      "type": "read-only",
+      "usedBy": ["diagnosis-agent"],
+      "description": "Finds previously recorded incident patterns similar to the current error signature, scoped by tenantId."
+    },
+    {
+      "name": "check_dlq_depth",
+      "type": "read-only",
+      "usedBy": ["verify-agent"],
+      "description": "Returns active/dead-letter/total message counts for a queue, used to confirm repair outcome."
+    },
+    {
+      "name": "query_erp",
+      "type": "read-only",
+      "usedBy": ["verify-agent"],
+      "description": "Queries the ERP system to confirm the business record reached the expected state."
+    },
+    {
+      "name": "replay_messages",
+      "type": "mutating",
+      "usedBy": ["repair-agent (deterministic .NET code only, not a Prompt Agent)"],
+      "description": "Replays dead-letter messages back onto the main queue. Only called after policy approval — see RepairPolicyEngine.cs."
+    },
+    {
+      "name": "upsert_pattern",
+      "type": "mutating",
+      "usedBy": ["verify-agent"],
+      "description": "Records a learned incident pattern (root cause + repair outcome) for future similarity search."
+    }
+  ]
+}

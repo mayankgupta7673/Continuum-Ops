@@ -1,0 +1,7 @@
+azure-functions>=1.24.0
+azure-identity>=1.19.0
+azure-servicebus>=7.13.0
+azure-search-documents>=11.6.0
+azure-monitor-query>=1.4.0
+azure-cosmos>=4.9.0
+requests>=2.32.0
